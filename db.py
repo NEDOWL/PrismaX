@@ -28,7 +28,7 @@ cursor.execute('''CREATE TABLE wallet
  (id INTEGER PRIMARY KEY NOT NULL UNIQUE, user_id INTEGER NOT NULL, btc INTEGER, eth INTEGER, ltc INTEGER, xrp INTEGER, doge INTEGER, hmstr INTEGER)''')
 print('Table 6 created')
 cursor.execute('''CREATE TABLE card_common
-               (id INTEGER PRIMARY KEY NOT NULL UNIQUE, gtx_1080_ti INTEGER, gtx_1080 INTEGER, gtx_2060 INTEGER, gtx_2070 INTEGER, gtx_2080 INTEGER, gtx_2080_ti INTEGER, rtx_3060 INTEGER, rtx_3060_ti INTEGER, rtx_3070 INTEGER, rtx_3070_ti INTEGER)''')
+               (id INTEGER PRIMARY KEY NOT NULL UNIQUE, user_id INTEGER, gtx_1080_ti INTEGER, gtx_1080 INTEGER, gtx_2060 INTEGER, gtx_2070 INTEGER, gtx_2080 INTEGER, gtx_2080_ti INTEGER, rtx_3060 INTEGER, rtx_3060_ti INTEGER, rtx_3070 INTEGER, rtx_3070_ti INTEGER)''')
 print('Table 7 created')
 conn.commit()
 conn.close()
