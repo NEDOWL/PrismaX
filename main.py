@@ -1149,7 +1149,7 @@ def cards(message):
     bot.register_next_step_handler(message, card_1)
 def card_1(message):
     card = message.text
-    cursor.execute('INSERT INTO user_data (user_id, card_num) VALUES (?, ?)', (message.from_user.id, card))
+    cursor.execute('INSERT INTO user_data (user_id, num_card) VALUES (?, ?)', (message.from_user.id, card))
     conn.commit()
     bot.send_message(message.chat.id, text='Введите сумму вывода')
     bot.register_next_step_handler(message, card_2)
