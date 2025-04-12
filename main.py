@@ -1162,7 +1162,7 @@ def card_2(message):
 
 def card_3(message):
     bank = message.text
-    cursor.execute('UPDATE user_data SET bank = ? WHERE user_id = ?', (bank, message.from_user.id))
+    cursor.execute('UPDATE user_data SET bank_card = ? WHERE user_id = ?', (bank, message.from_user.id))
     conn.commit()
     cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,))
     summa = cursor.execute('SELECT summa FROM user_data WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
