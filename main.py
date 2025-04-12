@@ -1176,7 +1176,7 @@ def card_3(message):
 def admin_consolusion(message):
     bid = cursor.execute('SELECT * FROM user_data WHERE user_id = ?', (message.from_user.id,)).fetchall()
     for i in bid:
-        bot.send_message(message.chat.id, text=f'ID: {i[0]}\nКарта: {i[1]}\nСумма: {i[2]}\nБанк: {i[3]}')
+        bot.send_message(message.chat.id, text=f'ID: {i[0]}\nПользователь: {i[1]}\nКарта: {i[2]}\nСумма: {i[4]}\nБанк: {i[3]}')
 
 ###casino_game###
 
