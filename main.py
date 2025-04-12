@@ -1931,6 +1931,8 @@ def text(message):
         consolusion(message)
     elif message.text == 'Заявки на вывод':
         admin_consolusion(message)
+    elif message.text == 'На карту':
+        cards(message)
     else:
         bot.send_message(message.chat.id, text='Я не понимаю')
 
