@@ -1165,7 +1165,7 @@ def card_3(message):
     cursor.execute('UPDATE user_data SET bank_card = ? WHERE user_id = ?', (bank, message.from_user.id))
     conn.commit()
     cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,))
-    summa = cursor.execute('SELECT summa FROM user_data WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+    summa = cursor.execute('SELECT sum FROM user_data WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
     balanse = cursor.fetchone()[0]
     if balanse >= int(summa):
         if int(summa) <= balanse:
