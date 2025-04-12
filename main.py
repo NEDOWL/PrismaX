@@ -1602,6 +1602,8 @@ def check_yoomoney_payments():
                             'SELECT user_id, amount FROM pending_payments WHERE label = ?',
                             (label,)
                         ).fetchone()
+                        print(f"Проверяем платеж с меткой {label}: {pending_payment}")  # Логируем проверку платежа
+                        # Если платеж найден, проверяем сумму
 
                         if pending_payment:
                             user_id, expected_amount = pending_payment
