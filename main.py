@@ -1632,6 +1632,7 @@ def check_yoomoney_payments():
                                 print(f"Сумма платежа {amount} не совпадает с ожидаемой {expected_amount}.")
                         else:
                             print(f"Платеж с меткой {label} не найден в ожидающих.")
+                            print(cursor.execute('SELECT * FROM pending_payments').fetchall())
             elif response.status_code == 401:
                 print("Ошибка API ЮMoney: Неверный токен авторизации. Проверьте токен.")
             else:
