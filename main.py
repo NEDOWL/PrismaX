@@ -1174,9 +1174,23 @@ def card_3(message):
             bot.send_message(message.chat.id, text='Заявка на вывод средств успешно отправлена')
             
 def admin_consolusion(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    back = types.KeyboardButton('Назад')
+    user_id = types.KeyboardButton('Удалить заявку')
+    markup.add(user_id, back)
     bid = cursor.execute('SELECT * FROM user_data WHERE user_id = ?', (message.from_user.id,)).fetchall()
     for i in bid:
         bot.send_message(message.chat.id, text=f'ID: {i[0]}\nПользователь: {i[1]}\nКарта: {i[2]}\nСумма: {i[4]}\nБанк: {i[3]}')
+    bot.send_message(message.chat.id, text='Заявки на вывод средств', reply_markup=markup)
+def delete_bid(message):
+    bot.send_message(message.chat.id, text='Введите ID заявки')
+    bot.register_next_step_handler(message, delete_bid_1)
+def delete_bid_1(message):
+    bid_id = message.text
+    cursor.execute('DELETE FROM user_data WHERE id = ?', (bid_id,))
+    conn.commit()
+    bot.send_message(message.chat.id, text='Заявка успешно удалена')
+
 
 ###casino_game###
 
@@ -1933,6 +1947,8 @@ def text(message):
         admin_consolusion(message)
     elif message.text == 'На карту':
         cards(message)
+    elif message.text == 'Удалить заявку':
+        delete_bid(message)
     else:
         bot.send_message(message.chat.id, text='Я не понимаю')
 
