@@ -87,8 +87,8 @@ def menu(message):
     print(cursor.execute('SELECT * FROM user').fetchall())
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     profile = types.KeyboardButton('👤 Профиль')
-    balance = types.KeyboardButton('💳 Пополнить Баланс')
-    yoomoney = types.KeyboardButton('💳 Пополнить Баланс через ЮMoney')
+    yoomoney = types.KeyboardButton('💳 Пополнить Баланс')
+    yoomoney_2 = types.KeyboardButton('💳 Вывести Баланс')
     admin = types.KeyboardButton('🔧 Админ')
     shop_common = types.KeyboardButton('🛒 Магазин')
     shop = types.KeyboardButton('💎 Премиум магазин')
@@ -99,9 +99,9 @@ def menu(message):
     print(admins)
     print(cursor.execute('SELECT * FROM user').fetchall())
     if admins == [(1,)]:
-        markup.add(profile, balance, yoomoney, shop_common, shop, bir, casino, admin, conversion)
+        markup.add(profile, yoomoney, yoomoney_2, shop_common, shop, bir, casino, admin, conversion)
     else:
-        markup.add(profile, balance, yoomoney, shop_common, shop, bir, casino, conversion)
+        markup.add(profile, yoomoney, yoomoney_2, shop_common, shop, bir, casino, conversion)
     bot.send_message(message.chat.id, text='🏠 Главное меню\n\nВыберите действие:', reply_markup=markup)
 
 
@@ -1065,7 +1065,8 @@ def admin(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     back = types.KeyboardButton('Назад')
     search_user = types.KeyboardButton('Поиск пользователя')
-    markup.add(search_user, back)
+    bid = types.KeyboardButton('Заявки на вывод')
+    markup.add(search_user, bid, back)
     bot.send_message(message.chat.id, text='Админ панель', reply_markup=markup)
 
 
@@ -1134,8 +1135,48 @@ print('bot is start')
 
 def referal(message):
     ref_cod = cursor.execute('SELECT ref_cod FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
-    bot.send_message(message.chat.id, text=f'Ваша реферальная ссылка https://t.me/Ai_asistent_my_bot?start={ref_cod}')
+    bot.send_message(message.chat.id, text=f'Ваша реферальная ссылка https://t.me/prismaxbot?start={ref_cod}')
 
+# вывод средств на карту
+def consolusion(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    back = types.KeyboardButton('Назад')
+    card = types.KeyboardButton('На карту')
+    markup.add(card, back)
+    bot.send_message(message.chat.id, text='Выберите способ вывода средств', reply_markup=markup)
+def cards(message):
+    bot.send_message(message.chat.id, text='Введите номер карты')
+    bot.register_next_step_handler(message, card_1)
+def card_1(message):
+    card = message.text
+    cursor.execute('INSERT INTO user_data (user_id, card_num) VALUES (?, ?)', (message.from_user.id, card))
+    conn.commit()
+    bot.send_message(message.chat.id, text='Введите сумму вывода')
+    bot.register_next_step_handler(message, card_2)
+def card_2(message):
+    summa = message.text
+    cursor.execute('UPDATE user_data SET summa = ? WHERE user_id = ?', (summa, message.from_user.id))
+    conn.commit()
+    bot.send_message(message.chat.id, text='Введите название банка')
+    bot.register_next_step_handler(message, card_3)
+
+def card_3(message):
+    bank = message.text
+    cursor.execute('UPDATE user_data SET bank = ? WHERE user_id = ?', (bank, message.from_user.id))
+    conn.commit()
+    cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,))
+    summa = cursor.execute('SELECT summa FROM user_data WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+    balanse = cursor.fetchone()[0]
+    if balanse >= int(summa):
+        if int(summa) <= balanse:
+            cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse - int(summa), message.from_user.id))
+            conn.commit()
+            bot.send_message(message.chat.id, text='Заявка на вывод средств успешно отправлена')
+            
+def admin_consolusion(message):
+    bid = cursor.execute('SELECT * FROM user_data WHERE user_id = ?', (message.from_user.id,)).fetchall()
+    for i in bid:
+        bot.send_message(message.chat.id, text=f'ID: {i[0]}\nКарта: {i[1]}\nСумма: {i[2]}\nБанк: {i[3]}')
 
 ###casino_game###
 
@@ -1886,6 +1927,10 @@ def text(message):
         convert_viv_to_rub(message)
     elif message.text == 'Конвертация валют':
         conversion_menu(message)
+    elif message.text == '💳 Вывести Баланс':
+        consolusion(message)
+    elif message.text == 'Заявки на вывод':
+        admin_consolusion(message)
     else:
         bot.send_message(message.chat.id, text='Я не понимаю')
 
