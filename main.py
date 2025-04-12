@@ -143,13 +143,13 @@ def profile(message):
     conn.commit()
     balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
 
-    btc = round(float(f'{cursor.execute('SELECT btc FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}'), 8)
+    btc = round(float(f"{cursor.execute('SELECT btc FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}"), 8)
     print(f'{btc:.10f}')
-    eth = float(f'{cursor.execute('SELECT eth FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}')
-    ltc = float(f'{cursor.execute('SELECT ltc FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}')
-    xrp = float(f'{cursor.execute('SELECT xrp FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}')
-    doge = float(f'{cursor.execute('SELECT doge FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}')
-    hmstr = float(f'{cursor.execute('SELECT hmstr FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}')
+    eth = float(f"{cursor.execute('SELECT eth FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}")
+    ltc = float(f"{cursor.execute('SELECT ltc FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}")
+    xrp = float(f"{cursor.execute('SELECT xrp FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}")
+    doge = float(f"{cursor.execute('SELECT doge FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}")
+    hmstr = float(f"{cursor.execute('SELECT hmstr FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}")
     if btc < 0.00000001:
         btc = 0
     if eth < 0.00000001:
