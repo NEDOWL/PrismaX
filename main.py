@@ -4,14 +4,16 @@ import sqlite3
 import time
 import random
 import hashlib
+import requests  # Для работы с API ЮMoney
+import urllib.parse
+import threading  # Для запуска проверки в отдельном потоке
 
 conn = sqlite3.connect('db.db', check_same_thread=False)
 cursor = conn.cursor()
 
-tocen = '8156778620:AAGDqv6M3xzOH75owFRtTGU59EPaz_Mz0II'
+tocen = '8097692196:AAGNxRShie7tlqV9INbHlOl9wy0LedeHSAA'
 bot = telebot.TeleBot(token=tocen)
 admin = 2146048678
-
 
 
 def db(user_id: int, user_name: str, message):
@@ -25,16 +27,16 @@ def db(user_id: int, user_name: str, message):
     admin = 0
     ref_cod = random.randint(100000, 999999)
     ref_cods = cursor.execute('SELECT ref_cod FROM user').fetchone()
-    #for i in ref_cods:
+    # for i in ref_cods:
     #    if i == ref_cod:
     #        ref_cod = random.randint(1000000, 9999999)
     print("ref", ref_cods)
     print(message.from_user.id)
-    cursor.execute('INSERT INTO card_common (user_id, gtx_1080_ti, gtx_1080, gtx_2060, gtx_2070, gtx_2080, gtx_2080_ti, rtx_3060, rtx_3060_ti, rtx_3070, rtx_3070_ti) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (user_id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))   
+    cursor.execute('INSERT INTO card_common (user_id, gtx_1080_ti, gtx_1080, gtx_2060, gtx_2070, gtx_2080, gtx_2080_ti, rtx_3060, rtx_3060_ti, rtx_3070, rtx_3070_ti) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (user_id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     cursor.execute('INSERT INTO card (user_id, rtx_5090, rtx_4090, rtx_3090_ti, rtx_3090, rtx_3080_ti, rtx_3080, ice_river_aeo, goldshell_ae_box, goldshell_ae_box_pro, goldshell_ae_box_ii, gtx_1080_ti) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (user_id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     cursor.execute('INSERT INTO crypto_price (btc, eth, ltc, xrp, doge, hmstr) VALUES (?, ?, ?, ?, ?, ?)', (btc, eth, ltc, xrp, doge, hmstr))
     cursor.execute('INSERT INTO crypto (user_id, btc, eth, ltc, xrp, doge, hmstr) VALUES (?, ?, ?, ?, ?, ?, ?)', (user_id, 0, 0, 0, 0, 0, 0))
-    cursor.execute('INSERT INTO user (user_id, user_name, admin, balanse, time_income, mining, start_pack, ref_cod, ref_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', (user_id, user_name, admin, 0, times, 'BTC', 0, ref_cod, 0))
+    cursor.execute('INSERT INTO user (user_id, user_name, admin, balanse, balanse_viv, time_income, mining, start_pack, ref_cod, ref_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (user_id, user_name, admin, 0, 0, times, 'BTC', 0, ref_cod, 0))
     cursor.execute('INSERT INTO time (user_id, times) VALUES (?, ?)', (user_id, times))
     print(cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_id,)).fetchone())
     if cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_id,)).fetchone() == [(None,)]:
@@ -46,7 +48,8 @@ def db(user_id: int, user_name: str, message):
         admin = 1
         cursor.execute('UPDATE user SET admin = ? WHERE user_id = ?', (admin, user_id))
         conn.commit()
-    
+
+
 def ref_new(message, ref_cod):
     user = cursor.execute('SELECT user_id FROM user WHERE ref_cod = ?', (ref_cod,)).fetchone()
     if user is None:
@@ -62,8 +65,6 @@ def ref_new(message, ref_cod):
         conn.commit()
 
 
-
-
 @bot.message_handler(commands=['start'])
 def start(message):
     id = cursor.execute('SELECT user_id FROM user').fetchall()
@@ -74,11 +75,12 @@ def start(message):
     else:
         us_id = message.from_user.id
         us_name = message.from_user.username
-        print(us_id, us_name) 
+        print(us_id, us_name)
         db(user_id=us_id, user_name=us_name, message=message)
         menu(message)
         ref_cod = message.text[7:]
         ref_new(message, ref_cod)
+
 
 @bot.message_handler(commands=['menu'])
 def menu(message):
@@ -86,6 +88,7 @@ def menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     profile = types.KeyboardButton('👤 Профиль')
     balance = types.KeyboardButton('💳 Пополнить Баланс')
+    yoomoney = types.KeyboardButton('💳 Пополнить Баланс через ЮMoney')
     admin = types.KeyboardButton('🔧 Админ')
     shop_common = types.KeyboardButton('🛒 Магазин')
     shop = types.KeyboardButton('💎 Премиум магазин')
@@ -96,13 +99,13 @@ def menu(message):
     print(admins)
     print(cursor.execute('SELECT * FROM user').fetchall())
     if admins == [(1,)]:
-        markup.add(profile, balance, shop_common, shop, bir, casino , admin, conversion)
+        markup.add(profile, balance, yoomoney, shop_common, shop, bir, casino, admin, conversion)
     else:
-        markup.add(profile, balance, shop_common, shop, bir, casino, conversion)
+        markup.add(profile, balance, yoomoney, shop_common, shop, bir, casino, conversion)
     bot.send_message(message.chat.id, text='🏠 Главное меню\n\nВыберите действие:', reply_markup=markup)
 
+
 def profile(message):
-   
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     change_mine_crime = types.KeyboardButton(text='⛏️ Выбор криптовалюты')
     start_pack = types.KeyboardButton(text='🎁 Забрать стартовый пакет')
@@ -139,7 +142,7 @@ def profile(message):
     cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse, message.from_user.id))
     conn.commit()
     balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
-    
+
     btc = round(float(f'{cursor.execute('SELECT btc FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}'), 8)
     print(f'{btc:.10f}')
     eth = float(f'{cursor.execute('SELECT eth FROM crypto WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]:.10f}')
@@ -159,10 +162,12 @@ def profile(message):
         doge = 0
     if hmstr < 0.00000001:
         hmstr = 0
-    bot.send_message(message.chat.id, text=f'Профиль\nusername: {message.from_user.username}\nid: {message.from_user.id}\nбаланс: {balanse}\n\nКриптовалюты:\nbtc: {btc:.8f}\neth: {eth:.8f}\nltc: {ltc:.8f}\nxrp: {xrp:.8f}\ndoge: {doge:.8f}\nhmstr: {hmstr:.8f}\n\n Крипта которую вы майните: {ming}\n\nОбщий доход:\n{income} руб/мес\n{(income/30):.3f} руб/день\n{(income/30/24):.3f} руб/час', reply_markup=markup)
-    #bot.send_message(message.chat.id, text=f'Профиль\nusername: {message.from_user.username}\nid: {message.from_user.id}\nбаланс: {balanse}')
-    
+    balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+    bot.send_message(message.chat.id, text=f'Профиль\nusername: {message.from_user.username}\nid: {message.from_user.id}\nбаланс: {balanse} руб.\nбаланс: {balanse_viv} вив\n\nКриптовалюты:\nbtc: {btc:.8f}\neth: {eth:.8f}\nltc: {ltc:.8f}\nxrp: {xrp:.8f}\ndoge: {doge:.8f}\nhmstr: {hmstr:.8f}\n\n Крипта которую вы майните: {ming}\n\nОбщий доход:\n{income} руб/мес\n{(income/30):.3f} руб/день\n{(income/30/24):.3f} руб/час', reply_markup=markup)
+    # bot.send_message(message.chat.id, text=f'Профиль\nusername: {message.from_user.username}\nid: {message.from_user.id}\nбаланс: {balanse}')
+
     print(cursor.execute('SELECT * FROM card').fetchall())
+
 
 def wallets(message):
     print(cursor.execute('SELECT * FROM crypto_price').fetchall())
@@ -224,25 +229,34 @@ def wallets(message):
             cursor.execute('UPDATE crypto SET hmstr = ? WHERE user_id = ?', (hmstrs + hmstrs_old, message.from_user.id))
             conn.commit()
 
-#def wallet(message):
- #   wallets(message)
-  #  cursor.execute('SELECT btc, eth, ltc, xrp, doge, hmstr FROM crypto WHERE user_id = ?', (message.from_user.id,))
-   # wallet = cursor.fetchone()
-    #print(wallet)
-    #bot.send_message(message.chat.id, text=f'Кошелек\nbtc: {wallet[0]}\neth: {wallet[1]}\nltc: {wallet[2]}\nxrp: {wallet[3]}\ndoge: {wallet[4]}\nhmstr: {wallet[5]}')
+
+# def wallet(message):
+#   wallets(message)
+#  cursor.execute('SELECT btc, eth, ltc, xrp, doge, hmstr FROM crypto WHERE user_id = ?', (message.from_user.id,))
+# wallet = cursor.fetchone()
+# print(wallet)
+# bot.send_message(message.chat.id, text=f'Кошелек\nbtc: {wallet[0]}\neth: {wallet[1]}\nltc: {wallet[2]}\nxrp: {wallet[3]}\ndoge: {wallet[4]}\nhmstr: {wallet[5]}')
 
 # Конвертация рублей в вив
 def rub_to_viv(rub):
     return rub * 100
 
+
 # Конвертация вив в рубли
 def viv_to_rub(viv):
     return viv / 100
+
 
 # Обновление функции give_balanse для работы с вив
 def give_balanse(user_id: int, balanse_viv: int):
     cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (balanse_viv, user_id))
     conn.commit()
+
+
+def give_balanse_rub(user_id: int, balanse: int):
+    cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse, user_id))
+    conn.commit()
+
 
 def pay(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -254,6 +268,7 @@ def pay(message):
     beck = types.KeyboardButton('🔙 Назад')
     markup.add(sto, dves, tris, chet, five, beck)
     bot.send_message(message.chat.id, text='💳 Выберите сумму пополнения:', reply_markup=markup)
+
 
 def shop_common(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -267,33 +282,36 @@ def shop_common(message):
     rtx_3060_ti = types.KeyboardButton('🖥️ RTX 3060 TI')
     rtx_3070 = types.KeyboardButton('🖥️ RTX 3070')
     rtx_3070_ti = types.KeyboardButton('🖥️ RTX 3070 TI')
-   # next = types.KeyboardButton('Следующая страница')
+    # next = types.KeyboardButton('Следующая страница')
     beck = types.KeyboardButton('🔙 Назад')
     markup.add(gtx_1080_ti, gtx_1080, gtx_2060, gtx_2070, gtx_2080, gtx_2080_ti, rtx_3060, rtx_3060_ti, rtx_3070, rtx_3070_ti, beck)
     bot.send_message(message.chat.id, text='🛒 Магазин видеокарт:', reply_markup=markup)
+
 
 def gtx_1080_ti(message):
     markup = types.InlineKeyboardMarkup()
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_1080_ti')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
-    bot.send_message(message.chat.id, text='Вы выбрали карту GTX 1080 TI\n\nХарактеристики и ее стоимость:\n доход: 100 руб/мес\n стоимость: 200руб\n\nОкупаемость: 2 месяцев', reply_markup=markup)
+    bot.send_message(message.chat.id, text='Вы выбрали карту GTX 1080 TI\n\nХарактеристики и ее стоимость:\n доход: 100 вив/мес\n стоимость: 200вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
+
 
 def buy_1080_ti(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка: пользователь не найден в базе данных.')
         return
-    
+
     balanses = result[0]
     income = cursor.execute('SELECT gtx_1080_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 200:
         cursor.execute('UPDATE card_common SET gtx_1080_ti = ? WHERE user_id = ?', (income + 100, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 200)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 200)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили GTX 1080TI')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def gtx_1080(message):
     markup = types.InlineKeyboardMarkup()
@@ -302,21 +320,23 @@ def gtx_1080(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту GTX 1080\n\nХарактеристики и ее стоимость:\n доход: 120 вив/мес\n стоимость: 250вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_1080(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-    
+
     balanses = result[0]
     income = cursor.execute('SELECT gtx_1080 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 250:
         cursor.execute('UPDATE card_common SET gtx_1080 = ? WHERE user_id = ?', (income + 120, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 250)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 250)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили GTX 1080')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def gtx_2060(message):
     markup = types.InlineKeyboardMarkup()
@@ -325,21 +345,23 @@ def gtx_2060(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту GTX 2060\n\nХарактеристики и ее стоимость:\n доход: 150 вив/мес\n стоимость: 350вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_2060(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-    
+
     balanses = result[0]
     income = cursor.execute('SELECT gtx_2060 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 350:
         cursor.execute('UPDATE card_common SET gtx_2060 = ? WHERE user_id = ?', (income + 150, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 350)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 350)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили GTX 2060')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def gtx_2070(message):
     markup = types.InlineKeyboardMarkup()
@@ -348,21 +370,23 @@ def gtx_2070(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту GTX 2070\n\nХарактеристики и ее стоимость:\n доход: 200 вив/мес\n стоимость: 500вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_2070(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-    
+
     balanses = result[0]
     income = cursor.execute('SELECT gtx_2070 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 500:
         cursor.execute('UPDATE card_common SET gtx_2070 = ? WHERE user_id = ?', (income + 200, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 500)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 500)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили GTX 2070')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def gtx_2080(message):
     markup = types.InlineKeyboardMarkup()
@@ -371,21 +395,23 @@ def gtx_2080(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту GTX 2080\n\nХарактеристики и ее стоимость:\n доход: 250 вив/мес\n стоимость: 700вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_2080(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-    
+
     balanses = result[0]
     income = cursor.execute('SELECT gtx_2080 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 700:
         cursor.execute('UPDATE card_common SET gtx_2080 = ? WHERE user_id = ?', (income + 250, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 700)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 700)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили GTX 2080')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def gtx_2080_ti(message):
     markup = types.InlineKeyboardMarkup()
@@ -394,21 +420,23 @@ def gtx_2080_ti(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту GTX 2080 TI\n\nХарактеристики и ее стоимость:\n доход: 300 вив/мес\n стоимость: 1000вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_2080_ti(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-    
+
     balanses = result[0]
     income = cursor.execute('SELECT gtx_2080_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 1000:
         cursor.execute('UPDATE card_common SET gtx_2080_ti = ? WHERE user_id = ?', (income + 300, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 1000)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 1000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили GTX 2080 TI')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_3060(message):
     markup = types.InlineKeyboardMarkup()
@@ -417,21 +445,23 @@ def rtx_3060(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 3060\n\nХарактеристики и ее стоимость:\n доход: 350 вив/мес\n стоимость: 1200вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_3060(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-    
+
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3060 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 1200:
         cursor.execute('UPDATE card_common SET rtx_3060 = ? WHERE user_id = ?', (income + 350, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 1200)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 1200)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 3060')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_3060_ti(message):
     markup = types.InlineKeyboardMarkup()
@@ -440,8 +470,9 @@ def rtx_3060_ti(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 3060 TI\n\nХарактеристики и ее стоимость:\n доход: 400 вив/мес\n стоимость: 1500вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_3060_ti(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
@@ -450,10 +481,11 @@ def buy_3060_ti(call, user_ids):
     if balanses >= 1500:
         cursor.execute('UPDATE card_common SET rtx_3060_ti = ? WHERE user_id = ?', (income + 400, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 1500)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 1500)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 3060 TI')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_3070(message):
     markup = types.InlineKeyboardMarkup()
@@ -462,8 +494,9 @@ def rtx_3070(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 3070\n\nХарактеристики и ее стоимость:\n доход: 500 вив/мес\n стоимость: 2000вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_3070(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
@@ -472,10 +505,11 @@ def buy_3070(call, user_ids):
     if balanses >= 2000:
         cursor.execute('UPDATE card_common SET rtx_3070 = ? WHERE user_id = ?', (income + 500, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 2000)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 2000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 3070')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_3070_ti(message):
     markup = types.InlineKeyboardMarkup()
@@ -484,8 +518,9 @@ def rtx_3070_ti(message):
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 3070 TI\n\nХарактеристики и ее стоимость:\n доход: 600 вив/мес\n стоимость: 2500вив\n\nОкупаемость: 2 месяцев', reply_markup=markup)
 
+
 def buy_3070_ti(call, user_ids):
-    result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
+    result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
@@ -494,7 +529,7 @@ def buy_3070_ti(call, user_ids):
     if balanses >= 2500:
         cursor.execute('UPDATE card_common SET rtx_3070_ti = ? WHERE user_id = ?', (income + 600, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 2500)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - 2500)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 3070 TI')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
@@ -513,6 +548,7 @@ def shop_1(message):
     markup.add(rtx_5090, rtx_4090, rtx_3090_ti, rtx_3090, rtx_3080_ti, rtx_3080, beck, next)
     bot.send_message(message.chat.id, text='Магазин', reply_markup=markup)
 
+
 def shop_2(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     ice_river = types.KeyboardButton('Ice River AEO')
@@ -522,7 +558,8 @@ def shop_2(message):
     back_1 = types.KeyboardButton('Предыдущая страница')
     beck = types.KeyboardButton('Назад')
     markup.add(ice_river, gl_shell, gl_shell_pro, gl_shell_ii, beck, back_1)
-    bot.send_message(message.chat.id, text='Магазин', reply_markup=markup) 
+    bot.send_message(message.chat.id, text='Магазин', reply_markup=markup)
+
 
 def rtx_5090(message):
     markup = types.InlineKeyboardMarkup()
@@ -530,6 +567,7 @@ def rtx_5090(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 5090\n\nХарактеристики и ее стоимость:\n доход: 788 руб/мес\n стоимость: 10000руб\n\nОкупаемость: 12 месяцев', reply_markup=markup)
+
 
 def buy_5090(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -543,10 +581,11 @@ def buy_5090(call, user_ids):
     if balanses >= 10000:
         cursor.execute('UPDATE card SET rtx_5090 = ? WHERE user_id = ?', (income + 788, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 10000)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 10000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 5090')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_4090(message):
     markup = types.InlineKeyboardMarkup()
@@ -554,6 +593,7 @@ def rtx_4090(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 4090\n\nХарактеристики и ее стоимость:\n доход: 483 руб/мес\n стоимость: 8000руб\n\nОкупаемость: 15 месяцев', reply_markup=markup)
+
 
 def buy_4090(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -566,10 +606,11 @@ def buy_4090(call, user_ids):
     if balanses >= 8000:
         cursor.execute('UPDATE card SET rtx_4090 = ? WHERE user_id = ?', (income + 788, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 8000)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 8000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 4090')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_3090_ti(message):
     markup = types.InlineKeyboardMarkup()
@@ -577,6 +618,7 @@ def rtx_3090_ti(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 3090 TI\n\nХарактеристики и ее стоимость:\n доход: 330 руб/мес\n стоимость: 6000руб\n\nОкупаемость: 18 месяцев', reply_markup=markup)
+
 
 def buy_3090_ti(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -589,10 +631,11 @@ def buy_3090_ti(call, user_ids):
     if balanses >= 6000:
         cursor.execute('UPDATE card SET rtx_3090_ti = ? WHERE user_id = ?', (income + 330, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 6000)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 6000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 3090 TI')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_3090(message):
     markup = types.InlineKeyboardMarkup()
@@ -600,6 +643,7 @@ def rtx_3090(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 3090\n\nХарактеристики и ее стоимость:\n доход: 300 руб/мес\n стоимость: 5500руб\n\nОкупаемость: 15 месяцев', reply_markup=markup)
+
 
 def buy_3090(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -612,10 +656,11 @@ def buy_3090(call, user_ids):
     if balanses >= 5500:
         cursor.execute('UPDATE card SET rtx_3090 = ? WHERE user_id = ?', (income + 300, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 5500)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 5500)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 3090')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_3080_ti(message):
     markup = types.InlineKeyboardMarkup()
@@ -623,6 +668,7 @@ def rtx_3080_ti(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 3080 TI\n\nХарактеристики и ее стоимость:\n доход: 250 руб/мес\n стоимость: 3000руб\n\nОкупаемость: 12 месяцев', reply_markup=markup)
+
 
 def buy_3080_ti(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -635,10 +681,11 @@ def buy_3080_ti(call, user_ids):
     if balanses >= 3000:
         cursor.execute('UPDATE card SET rtx_3080_ti = ? WHERE user_id = ?', (income + 250, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 3000)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 3000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 3080 TI')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def rtx_3080(message):
     markup = types.InlineKeyboardMarkup()
@@ -646,6 +693,7 @@ def rtx_3080(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали карту RTX 3080\n\nХарактеристики и ее стоимость:\n доход: 220 руб/мес\n стоимость: 2500руб\n\nОкупаемость: 10 месяцев', reply_markup=markup)
+
 
 def buy_3080(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -658,10 +706,11 @@ def buy_3080(call, user_ids):
     if balanses >= 2500:
         cursor.execute('UPDATE card SET rtx_3080 = ? WHERE user_id = ?', (income + 220, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 2500)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 2500)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили RTX 3080')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def iraeo(message):
     markup = types.InlineKeyboardMarkup()
@@ -669,6 +718,7 @@ def iraeo(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали Ice River AEO\n\nХарактеристики и ее стоимость:\n доход: 5000 руб/мес\n стоимость: 50000руб\n\nОкупаемость: 10 месяцев', reply_markup=markup)
+
 
 def buy_iraeo(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -681,10 +731,11 @@ def buy_iraeo(call, user_ids):
     if balanses >= 50000:
         cursor.execute('UPDATE card SET ice_river_aeo = ? WHERE user_id = ?', (income + 5000, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 50000)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 50000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили Ice River AEO')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def goldshell_ae_box(message):
     markup = types.InlineKeyboardMarkup()
@@ -692,6 +743,7 @@ def goldshell_ae_box(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали Goldshell AE BOX\n\nХарактеристики и ее стоимость:\n доход: 3000 руб/мес\n стоимость: 35000руб\n\nОкупаемость: 11 месяцев', reply_markup=markup)
+
 
 def buy_goldshell_ae_box(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -704,10 +756,11 @@ def buy_goldshell_ae_box(call, user_ids):
     if balanses >= 35000:
         cursor.execute('UPDATE card SET goldshell_ae_box = ? WHERE user_id = ?', (income + 3000, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 35000)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 35000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили Goldshell AE BOX')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def goldshell_ae_box_pro(message):
     markup = types.InlineKeyboardMarkup()
@@ -715,6 +768,7 @@ def goldshell_ae_box_pro(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали Goldshell AE BOX PRO\n\nХарактеристики и ее стоимость:\n доход: 2000 руб/мес\n стоимость: 15000руб\n\nОкупаемость: 11 месяцев', reply_markup=markup)
+
 
 def buy_goldshell_ae_box_pro(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -727,10 +781,11 @@ def buy_goldshell_ae_box_pro(call, user_ids):
     if balanses >= 15000:
         cursor.execute('UPDATE card SET goldshell_ae_box_pro = ? WHERE user_id = ?', (income + 2000, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 15000)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 15000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили Goldshell AE BOX PRO')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def goldshell_ae_box_ii(message):
     markup = types.InlineKeyboardMarkup()
@@ -738,6 +793,7 @@ def goldshell_ae_box_ii(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
     bot.send_message(message.chat.id, text='Вы выбрали Goldshell AE BOX II\n\nХарактеристики и ее стоимость:\n доход: 1500 руб/мес\n стоимость: 10000руб\n\nОкупаемость: 11 месяцев', reply_markup=markup)
+
 
 def buy_goldshell_ae_box_ii(call, user_ids):
     result = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -750,10 +806,11 @@ def buy_goldshell_ae_box_ii(call, user_ids):
     if balanses >= 10000:
         cursor.execute('UPDATE card SET goldshell_ae_box_ii = ? WHERE user_id = ?', (income + 1500, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse=balanses - 10000)
+        give_balanse_rub(user_id=user_ids, balanse=balanses - 10000)
         bot.send_message(call.chat.id, text='Поздравляю, вы купили Goldshell AE BOX II')
     else:
         bot.send_message(call.chat.id, text='У вас недостаточно средств')
+
 
 def bir(message):
     timess = cursor.execute('SELECT times FROM time WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
@@ -765,9 +822,11 @@ def bir(message):
         xrp = random.randint(200, 20000)
         doge = random.randint(1, 100)
         hmstr = random.randint(1, 10)
-        cursor.execute('UPDATE time SET times = ? WHERE user_id = ?', (times, message.from_user.id))
+        timet = time.time()
+        cursor.execute('UPDATE time SET times = ? WHERE user_id = ?', (timet, message.from_user.id))
         cursor.execute('UPDATE crypto_price SET btc = ?, eth = ?, ltc = ?, xrp = ?, doge = ?, hmstr = ?', (btc, eth, ltc, xrp, doge, hmstr))
         conn.commit()
+        print(times)
         print('Курс обновлен')
         print(cursor.execute('SELECT * FROM crypto_price').fetchall())
     else:
@@ -784,6 +843,7 @@ def bir(message):
     marcet.add(sale, buy, back)
     bot.send_message(message.chat.id, text=f'Добро пожаловать на биржу!\n\nКурс криптовалют:\n btc: {btc} руб/ед\n eth: {eth} руб/ед\n ltc: {ltc} руб/ед\n xrp: {xrp} руб/ед\n doge: {doge} руб/ед\n hmstr: {hmstr} руб/ед\n\n Курс меняется каждый час', reply_markup=marcet)
 
+
 def sale(message):
     markup = types.InlineKeyboardMarkup()
     btc = types.InlineKeyboardButton(text='BTC', callback_data='btc')
@@ -796,6 +856,7 @@ def sale(message):
     markup.add(btc, eth, ltc, xrp, doge, hmstr, back)
     bot.send_message(message.chat.id, text='Выберите криптовалюту для продажи', reply_markup=markup)
 
+
 def sale_btc(call, user_ids):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     back = types.KeyboardButton('Назад')
@@ -804,6 +865,7 @@ def sale_btc(call, user_ids):
     btc = cursor.fetchone()[0]
     bot.send_message(call.chat.id, text=f'Введите количество BTC для продажи\nВаш баланс BTC: {btc:.8f} ', reply_markup=markup)
     bot.register_next_step_handler(call, sale_btc_1)
+
 
 def sale_btc_1(message):
     try:
@@ -825,6 +887,7 @@ def sale_btc_1(message):
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
 
+
 def sale_eth(call, user_ids):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     sell = types.KeyboardButton('Продать')
@@ -834,6 +897,7 @@ def sale_eth(call, user_ids):
     eth = cursor.fetchone()[0]
     bot.send_message(call.chat.id, text=f'Введите количество ETH для продажи\nВаш баланс ETH: {eth:.8f} ', reply_markup=markup)
     bot.register_next_step_handler(call, sale_eth_1)
+
 
 def sale_eth_1(message):
     try:
@@ -855,6 +919,7 @@ def sale_eth_1(message):
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
 
+
 def sale_ltc(call, user_ids):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     sell = types.KeyboardButton('Продать')
@@ -864,6 +929,7 @@ def sale_ltc(call, user_ids):
     ltc = cursor.fetchone()[0]
     bot.send_message(call.chat.id, text=f'Введите количество LTC для продажи\nВаш баланс LTC: {ltc:.8f} ', reply_markup=markup)
     bot.register_next_step_handler(call, sale_ltc_1)
+
 
 def sale_ltc_1(message):
     try:
@@ -885,6 +951,7 @@ def sale_ltc_1(message):
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
 
+
 def sale_xrp(call, user_ids):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     sell = types.KeyboardButton('Продать')
@@ -894,6 +961,7 @@ def sale_xrp(call, user_ids):
     xrp = cursor.fetchone()[0]
     bot.send_message(call.chat.id, text=f'Введите количество XRP для продажи\nВаш баланс XRP: {xrp:.8f} ', reply_markup=markup)
     bot.register_next_step_handler(call, sale_xrp_1)
+
 
 def sale_xrp_1(message):
     try:
@@ -915,6 +983,7 @@ def sale_xrp_1(message):
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
 
+
 def sale_doge(call, user_ids):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     sell = types.KeyboardButton('Продать')
@@ -924,6 +993,7 @@ def sale_doge(call, user_ids):
     doge = cursor.fetchone()[0]
     bot.send_message(call.chat.id, text=f'Введите количество DOGE для продажи\nВаш баланс DOGE: {doge:.8f} ', reply_markup=markup)
     bot.register_next_step_handler(call, sale_doge_1)
+
 
 def sale_doge_1(message):
     try:
@@ -945,6 +1015,7 @@ def sale_doge_1(message):
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
 
+
 def sale_hmstr(call, user_ids):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     sell = types.KeyboardButton('Продать')
@@ -954,6 +1025,7 @@ def sale_hmstr(call, user_ids):
     hmstr = cursor.fetchone()[0]
     bot.send_message(call.chat.id, text=f'Введите количество HMSTR для продажи\nВаш баланс HMSTR: {hmstr:.8f} ', reply_markup=markup)
     bot.register_next_step_handler(call, sale_hmstr_1)
+
 
 def sale_hmstr_1(message):
     try:
@@ -975,6 +1047,7 @@ def sale_hmstr_1(message):
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
 
+
 def change_mine_crime(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btc = types.KeyboardButton('₿ BTC')
@@ -986,7 +1059,8 @@ def change_mine_crime(message):
     back = types.KeyboardButton('🔙 Назад')
     markup.add(btc, eth, ltc, xrp, doge, hmstr, back)
     bot.send_message(message.chat.id, text='⛏️ Выберите криптовалюту для майнинга (по умолчанию BTC):', reply_markup=markup)
-    
+
+
 def admin(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     back = types.KeyboardButton('Назад')
@@ -994,9 +1068,11 @@ def admin(message):
     markup.add(search_user, back)
     bot.send_message(message.chat.id, text='Админ панель', reply_markup=markup)
 
+
 def search_users(message):
     id = bot.send_message(message.chat.id, text='Введите ID пользователя')
     bot.register_next_step_handler(id, search_user)
+
 
 def search_user(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -1012,15 +1088,18 @@ def search_user(message):
     else:
         bot.send_message(message.chat.id, text=f'ID: {user[0]}\nusername: {user[1]}\nadmin: {user[2]}\nbalanse: {user[3]}\ntime_income: {user[4]}', reply_markup=markup)
 
+
 def add_balanse(message):
     id = bot.send_message(message.chat.id, text='Введите ID пользователя')
     bot.register_next_step_handler(id, add_balanse_1)
+
 
 def add_balanse_1(message):
     global user_id
     user_id = message.text
     balanse = bot.send_message(message.chat.id, text='Введите сумму')
     bot.register_next_step_handler(balanse, add_balanse_2)
+
 
 def add_balanse_2(message):
     global user_id
@@ -1035,11 +1114,13 @@ def add_balanse_2(message):
         conn.commit()
         bot.send_message(message.chat.id, text='Баланс успешно добавлен')
 
+
 def start_pack(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     start = types.KeyboardButton('Начать')
     markup.add(start)
     bot.send_message(message.chat.id, text='Добро пожаловать в игру\n\n Нажмите "Начать" чтобы начать зарабатывать реальные деньги)', reply_markup=markup)
+
 
 def start_pack_1(message):
     cursor.execute('UPDATE user SET start_pack = ? WHERE user_id = ?', (1, message.from_user.id))
@@ -1050,11 +1131,14 @@ def start_pack_1(message):
     profile(message)
 print('bot is start')
 
+
 def referal(message):
     ref_cod = cursor.execute('SELECT ref_cod FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
     bot.send_message(message.chat.id, text=f'Ваша реферальная ссылка https://t.me/Ai_asistent_my_bot?start={ref_cod}')
 
+
 ###casino_game###
+
 
 def casino_game_menu(message):
     markup = types.InlineKeyboardMarkup()
@@ -1065,6 +1149,7 @@ def casino_game_menu(message):
     markup.add(roulette, mines, slots, back)
     bot.send_message(message.chat.id, text='🎰 Выберите игру:', reply_markup=markup)
 
+
 def roulette(message):
     markup = types.InlineKeyboardMarkup()
     red = types.InlineKeyboardButton(text='Красный (x2)', callback_data='red')
@@ -1074,6 +1159,7 @@ def roulette(message):
     back = types.InlineKeyboardButton(text='Назад', callback_data='casino_game_menu')
     markup.add(red, black, green, number, back)
     bot.send_message(message.chat.id, text='Выберите тип ставки:', reply_markup=markup)
+
 
 def roulette_result(message, bet_type, bet_amount, bet_number=None):
     # Генерация серверного сида и хэша
@@ -1086,7 +1172,7 @@ def roulette_result(message, bet_type, bet_amount, bet_number=None):
     result_color = 'green' if result_number == 0 else ('red' if result_number % 2 == 0 else 'black')
 
     # Отправляем хэш серверного сида игроку
-    #bot.send_message(message.chat.id, text=f"Хэш серверного сида: {server_hash}")
+    # bot.send_message(message.chat.id, text=f"Хэш серверного сида: {server_hash}")
 
     # Проверка результата
     if bet_type == 'color':
@@ -1111,11 +1197,13 @@ def roulette_result(message, bet_type, bet_amount, bet_number=None):
     # Отправляем игроку серверный сид для проверки
     bot.send_message(message.chat.id, text=f"Серверный сид (для проверки): {server_seed}")
 
+
 def generate_server_seed():
     # Генерация случайного серверного сида и его хэша
     server_seed = str(random.getrandbits(256))
     server_hash = hashlib.sha256(server_seed.encode()).hexdigest()
     return server_seed, server_hash
+
 
 def generate_game_result(server_seed, client_seed, nonce):
     # Генерация результата игры на основе серверного и клиентского сидов
@@ -1124,10 +1212,12 @@ def generate_game_result(server_seed, client_seed, nonce):
     result = random.randint(0, 36)  # Результат от 0 до 36
     return result
 
+
 def roulette_bet_color(call, color):
     # Запрос ставки
     msg = bot.send_message(call.message.chat.id, text=f'Введите сумму ставки на {color}:')
     bot.register_next_step_handler(msg, process_bet_color, color)
+
 
 def process_bet_color(message, color):
     try:
@@ -1142,10 +1232,12 @@ def process_bet_color(message, color):
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
 
+
 def roulette_bet_number(call):
     # Запрос ставки на номер
     msg = bot.send_message(call.message.chat.id, text='Введите номер (0-36), на который хотите поставить:')
     bot.register_next_step_handler(msg, process_bet_number)
+
 
 def process_bet_number(message):
     try:
@@ -1157,6 +1249,7 @@ def process_bet_number(message):
         bot.register_next_step_handler(msg, process_bet_number_amount, bet_number)
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
+
 
 def process_bet_number_amount(message, bet_number):
     try:
@@ -1171,6 +1264,7 @@ def process_bet_number_amount(message, bet_number):
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
 
+
 def mines_game_menu(message):
     markup = types.InlineKeyboardMarkup()
     start_game = types.InlineKeyboardButton(text='Начать игру', callback_data='start_mines_game')
@@ -1178,9 +1272,11 @@ def mines_game_menu(message):
     markup.add(start_game, back)
     bot.send_message(message.chat.id, text='Добро пожаловать в игру "Мины".\n\nВыберите "Начать игру", чтобы начать.', reply_markup=markup)
 
+
 def start_mines_game(message):
     msg = bot.send_message(message.chat.id, text='Введите сумму ставки:')
     bot.register_next_step_handler(msg, process_mines_bet)
+
 
 def process_mines_bet(message):
     try:
@@ -1200,6 +1296,7 @@ def process_mines_bet(message):
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
 
+
 def process_bomb_count(message, bet_amount):
     try:
         bomb_count = int(message.text)
@@ -1210,6 +1307,7 @@ def process_bomb_count(message, bet_amount):
         start_mines_round(message, bet_amount, [], bomb_count)
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
+
 
 def start_mines_round(message, bet_amount, opened_cells, bomb_count):
     total_cells = 25
@@ -1232,6 +1330,7 @@ def start_mines_round(message, bet_amount, opened_cells, bomb_count):
 
     bot.send_message(message.chat.id, text='Выберите ячейку:', reply_markup=markup)
     bot.register_next_step_handler(message, process_mines_choice, bet_amount, bombs, opened_cells, bomb_count)
+
 
 def process_mines_choice(message, bet_amount, bombs, opened_cells, bomb_count):
     try:
@@ -1280,6 +1379,7 @@ def process_mines_choice(message, bet_amount, bombs, opened_cells, bomb_count):
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
 
+
 def slots_game_menu(message):
     markup = types.InlineKeyboardMarkup()
     start_game = types.InlineKeyboardButton(text='🎰 Играть в слоты', callback_data='start_slots_game')
@@ -1287,9 +1387,11 @@ def slots_game_menu(message):
     markup.add(start_game, back)
     bot.send_message(message.chat.id, text='Добро пожаловать в игру "Слоты".\n\nНажмите "Играть в слоты", чтобы начать.', reply_markup=markup)
 
+
 def start_slots_game(message):
     msg = bot.send_message(message.chat.id, text='Введите сумму ставки:')
     bot.register_next_step_handler(msg, process_slots_bet)
+
 
 def process_slots_bet(message):
     try:
@@ -1307,6 +1409,7 @@ def process_slots_bet(message):
         play_slots(message, bet_amount)
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
+
 
 def play_slots(message, bet_amount):
     symbols = ['🍒', '🍋', '🍉', '⭐', '🔔', '7️⃣', '🍇', '🍓', '🍍', '💎', '💰']
@@ -1336,17 +1439,20 @@ def play_slots(message, bet_amount):
 
     slots_game_menu(message)
 
+
 def conversion_menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    to_viv = types.KeyboardButton('Конвертировать рубли в вив')
-    to_rub = types.KeyboardButton('Конвертировать вив в рубли')
+    to_viv = types.KeyboardButton('рубли в вив')
+    to_rub = types.KeyboardButton('вив в рубли')
     back = types.KeyboardButton('🔙 Назад')
     markup.add(to_viv, to_rub, back)
     bot.send_message(message.chat.id, text='Выберите действие для конвертации:', reply_markup=markup)
 
+
 def convert_rub_to_viv(message):
     msg = bot.send_message(message.chat.id, text='Введите количество рублей для конвертации в вив:')
     bot.register_next_step_handler(msg, process_rub_to_viv)
+
 
 def process_rub_to_viv(message):
     try:
@@ -1366,9 +1472,11 @@ def process_rub_to_viv(message):
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
 
+
 def convert_viv_to_rub(message):
     msg = bot.send_message(message.chat.id, text='Введите количество вив для конвертации в рубли:')
     bot.register_next_step_handler(msg, process_viv_to_rub)
+
 
 def process_viv_to_rub(message):
     try:
@@ -1388,6 +1496,165 @@ def process_viv_to_rub(message):
     except ValueError:
         bot.send_message(message.chat.id, text='Введите корректное число.')
 
+
+# Функция для генерации ссылки на оплату через ЮMoney
+def generate_yoomoney_payment_link(amount, label):
+    base_url = "https://yoomoney.ru/quickpay/confirm.xml"
+    params = {
+        "receiver": "4100118995621972",  # Замените на ваш номер кошелька ЮMoney
+        "quickpay-form": "shop",
+        "targets": f"Пополнение баланса",
+        "paymentType": "AC",  # Банковская карта
+        "sum": amount,
+        "label": label
+    }
+    query_string = urllib.parse.urlencode(params)
+    return f"{base_url}?{query_string}"
+
+def yoomoney_payment(message):
+    try:
+        msg = bot.send_message(message.chat.id, text="Введите сумму пополнения (в рублях):")
+        bot.register_next_step_handler(msg, process_yoomoney_payment)
+    except Exception as e:
+        bot.send_message(message.chat.id, text="Произошла ошибка. Попробуйте снова.")
+
+# Функция для обработки платежа через ЮMoney
+def process_yoomoney_payment(message):
+    try:
+        amount = int(message.text)
+        if amount <= 0:
+            bot.send_message(message.chat.id, text="Введите положительное число.")
+            return
+
+        # Генерация уникального идентификатора платежа
+        payment_label = f"{message.from_user.id}_{int(time.time())}"
+
+        # Генерация ссылки на оплату
+        payment_link = generate_yoomoney_payment_link(amount, payment_label)
+        bot.send_message(
+            message.chat.id,
+            text=f"Для пополнения баланса перейдите по ссылке: {payment_link}\n\nПосле оплаты, баланс будет автоматически пополнен."
+        )
+
+        # Сохраняем информацию о платеже в базу данных
+        cursor.execute(
+            'INSERT INTO pending_payments (user_id, label, amount) VALUES (?, ?, ?)',
+            (message.from_user.id, payment_label, amount)
+        )
+        conn.commit()
+    except ValueError:
+        bot.send_message(message.chat.id, text="Введите корректное число.")
+
+
+def get_yoomoney_token(client_id, redirect_uri, scope):
+    """
+    Функция для получения токена ЮMoney через OAuth2.
+    """
+    auth_url = f"https://yoomoney.ru/oauth/authorize?client_id={client_id}&response_type=code&redirect_uri={redirect_uri}&scope={scope}"
+    print(f"Перейдите по следующей ссылке для авторизации: {auth_url}")
+    auth_code = input("Введите код авторизации: ")
+
+    token_url = "https://yoomoney.ru/oauth/token"
+    data = {
+        "code": auth_code,
+        "client_id": client_id,
+        "grant_type": "authorization_code",
+        "redirect_uri": redirect_uri
+    }
+    response = requests.post(token_url, data=data)
+    if response.status_code == 200:
+        token = response.json().get("access_token")
+        print(f"Токен успешно получен: {token}")
+        return token
+    else:
+        print(f"Ошибка получения токена: {response.status_code}, {response.text}")
+        return None
+
+# Пример использования функции get_yoomoney_token
+client_id = "5834FAC7D6FB0A2CC219FDE0B20250EC691A2BC438F14699A88023253F095AB9"  # Замените на ваш client_id
+redirect_uri = "http://localhost:8000"  # Укажите ваш redirect_uri
+scope = "account-info operation-history"  # Укажите необходимые права
+token = get_yoomoney_token(client_id, redirect_uri, scope)
+
+# Функция для проверки платежей через API ЮMoney
+def check_yoomoney_payments():
+    while True:
+        try:
+            if not token:
+                print("Ошибка: Токен ЮMoney не задан.")
+                time.sleep(60)
+                continue
+
+            headers = {"Authorization": f"Bearer {token}"}
+            response = requests.get("https://yoomoney.ru/api/operation-history", headers=headers)
+
+            if response.status_code == 200:
+                operations = response.json().get("operations", [])
+                print(f"Получено операций: {len(operations)}")  # Логируем количество операций
+                for operation in operations:
+                    print(f"Обработка операции: {operation}")  # Логируем данные операции
+                    if operation.get("status") == "success" and "label" in operation:
+                        label = operation["label"]
+                        amount = float(operation["amount"])
+
+                        # Проверяем, есть ли такой платеж в ожидающих
+                        pending_payment = cursor.execute(
+                            'SELECT user_id, amount FROM pending_payments WHERE label = ?',
+                            (label,)
+                        ).fetchone()
+
+                        if pending_payment:
+                            user_id, expected_amount = pending_payment
+
+                            # Проверяем, совпадает ли сумма
+                            if abs(expected_amount - amount) < 0.01:
+                                # Пополняем баланс пользователя
+                                balanse = cursor.execute(
+                                    'SELECT balanse FROM user WHERE user_id = ?',
+                                    (user_id,)
+                                ).fetchone()[0]
+                                cursor.execute(
+                                    'UPDATE user SET balanse = ? WHERE user_id = ?',
+                                    (balanse + amount, user_id)
+                                )
+
+                                # Удаляем запись из ожидающих платежей
+                                cursor.execute(
+                                    'DELETE FROM pending_payments WHERE label = ?',
+                                    (label,)
+                                )
+                                conn.commit()
+
+                                # Уведомляем пользователя
+                                bot.send_message(user_id, text=f"Ваш баланс успешно пополнен на {amount} руб.")
+                                print(f"Баланс пользователя {user_id} пополнен на {amount} руб.")
+                            else:
+                                print(f"Сумма платежа {amount} не совпадает с ожидаемой {expected_amount}.")
+                        else:
+                            print(f"Платеж с меткой {label} не найден в ожидающих.")
+            elif response.status_code == 401:
+                print("Ошибка API ЮMoney: Неверный токен авторизации. Проверьте токен.")
+            else:
+                print(f"Ошибка API ЮMoney: {response.status_code}, {response.text}")
+        except Exception as e:
+            print(f"Ошибка при проверке платежей: {e}")
+        time.sleep(60)  # Проверяем каждые 60 секунд
+
+
+# Создаем таблицу для хранения ожидающих платежей
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS pending_payments (
+    user_id INTEGER,
+    label TEXT PRIMARY KEY,
+    amount REAL
+)
+''')
+conn.commit()
+
+# Запускаем проверку платежей в отдельном потоке
+threading.Thread(target=check_yoomoney_payments, daemon=True).start()
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
     user_ids = call.from_user.id  # Используем call.from_user.id для получения ID пользователя
@@ -1395,10 +1662,10 @@ def callback(call):
     if call.data == 'sale':
         sale(call.message)
     elif call.data == 'buy':
-        #buy(call.message)
+        # buy(call.message)
         pass
     elif call.data == 'back':
-        #print(cursor.execute('SELECT admin FROM user WHERE user_id = ?', (call.message.from_user.id,)).fetchall())
+        # print(cursor.execute('SELECT admin FROM user WHERE user_id = ?', (call.message.from_user.id,)).fetchall())
         menu(call.message)
     elif call.data == 'buy_5090':
         buy_5090(call.message, user_ids)
@@ -1477,6 +1744,7 @@ def callback(call):
         print(f"Unknown callback data: {call.data}")
         pass
 
+
 # Пример изменения текста в функции text
 @bot.message_handler(content_types=['text'])
 def text(message):
@@ -1484,6 +1752,8 @@ def text(message):
         profile(message)
     elif message.text == '💳 Пополнить Баланс':
         pay(message)
+    elif message.text == '💳 Пополнить Баланс через ЮMoney':
+        yoomoney_payment(message)
     elif message.text == '💵 100':
         bot.send_message(message.chat.id, text='Вы пополнили баланс на 100 вив')
         give_balanse(user_id=message.from_user.id, balanse_viv=rub_to_viv(100) + cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0])
@@ -1510,7 +1780,7 @@ def text(message):
         shop_1(message)
     elif message.text == '📈 Биржа':
         bir(message)
-    elif message.text ==  '🔙 Назад' or message.text == 'Назад':
+    elif message.text == '🔙 Назад' or message.text == 'Назад':
         menu(message)
     elif message.text == 'RTX 5090':
         rtx_5090(message)
@@ -1562,7 +1832,7 @@ def text(message):
         conn.commit()
         bot.send_message(message.chat.id, text='Вы выбрали майнинг XRP')
         profile(message)
-    elif message.text == 'Ð DOGE':    
+    elif message.text == 'Ð DOGE':
         cursor.execute('UPDATE user SET mining = ? WHERE user_id = ?', ('DOGE', message.from_user.id))
         conn.commit()
         bot.send_message(message.chat.id, text='Вы выбрали майнинг DOGE')
@@ -1606,17 +1876,19 @@ def text(message):
         casino_game_menu(message)
     elif message.text == '🎰 Слоты':
         slots_game_menu(message)
-    elif message.text == 'Конвертировать рубли в вив':
+    elif message.text == 'рубли в вив':
         convert_rub_to_viv(message)
-    elif message.text == 'Конвертировать вив в рубли':
+    elif message.text == 'вив в рубли':
         convert_viv_to_rub(message)
     elif message.text == 'Конвертация валют':
         conversion_menu(message)
     else:
         bot.send_message(message.chat.id, text='Я не понимаю')
 
+
 def main():
     bot.polling(non_stop=True)
+
 
 if __name__ == '__main__':
     main()
