@@ -1155,7 +1155,7 @@ def card_1(message):
     bot.register_next_step_handler(message, card_2)
 def card_2(message):
     summa = message.text
-    cursor.execute('UPDATE user_data SET summa = ? WHERE user_id = ?', (summa, message.from_user.id))
+    cursor.execute('UPDATE user_data SET sum = ? WHERE user_id = ?', (summa, message.from_user.id))
     conn.commit()
     bot.send_message(message.chat.id, text='Введите название банка')
     bot.register_next_step_handler(message, card_3)
