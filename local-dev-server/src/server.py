@@ -13,4 +13,4 @@ def callback():
     return f"Received code: {code}, state: {state}"
 
 if __name__ == '__main__':
-    app.run(host='localhost', port=8000)
+    app.run(host='194.87.95.213', port=8000)

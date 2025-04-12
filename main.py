@@ -1572,7 +1572,7 @@ def get_yoomoney_token(client_id, redirect_uri, scope):
 
 # Пример использования функции get_yoomoney_token
 client_id = "5834FAC7D6FB0A2CC219FDE0B20250EC691A2BC438F14699A88023253F095AB9"  # Замените на ваш client_id
-redirect_uri = "http://localhost:8000"  # Укажите ваш redirect_uri
+redirect_uri = "http://194.87.95.213:8000/callback"  # Укажите ваш redirect_uri
 scope = "account-info operation-history"  # Укажите необходимые права
 token = get_yoomoney_token(client_id, redirect_uri, scope)
 
