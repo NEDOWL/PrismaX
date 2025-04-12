@@ -1610,7 +1610,7 @@ def check_yoomoney_payments():
                             user_id, expected_amount = pending_payment
 
                             # Проверяем, совпадает ли сумма
-                            if abs(expected_amount - amount * 0.03) < 0.01:  # Допустимая погрешность 3%
+                            if abs((expected_amount - expected_amount * 0.03) - amount) < 0.01:  # Допустимая погрешность 3%
                                 # Пополняем баланс пользователя
                                 balanse = cursor.execute(
                                     'SELECT balanse FROM user WHERE user_id = ?',
