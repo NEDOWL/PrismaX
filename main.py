@@ -1810,8 +1810,6 @@ def text(message):
     if message.text == '👤 Профиль':
         profile(message)
     elif message.text == '💳 Пополнить Баланс':
-        pay(message)
-    elif message.text == '💳 Пополнить Баланс через ЮMoney':
         yoomoney_payment(message)
     elif message.text == '💵 100':
         bot.send_message(message.chat.id, text='Вы пополнили баланс на 100 вив')
