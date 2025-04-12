@@ -1542,6 +1542,7 @@ def process_yoomoney_payment(message):
             (message.from_user.id, payment_label, amount)
         )
         conn.commit()
+        print(f"Сохраняем платеж: user_id={message.from_user.id}, label={payment_label}, amount={amount}")
     except ValueError:
         bot.send_message(message.chat.id, text="Введите корректное число.")
 
