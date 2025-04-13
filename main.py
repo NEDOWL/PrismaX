@@ -1000,7 +1000,7 @@ def rtx_5090(message):
     text=(
         "Вы выбрали карту **RTX 5090**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 788 руб/мес\n"
+        "💰 Доход: 78800 вив/мес\n"
         "💵 Стоимость: 10,000 руб\n"
         "⏳ Окупаемость: 12 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1023,7 +1023,7 @@ def buy_5090(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT rtx_5090 FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 10000:
-        cursor.execute('UPDATE card SET rtx_5090 = ? WHERE user_id = ?', (income + 788, user_ids,))
+        cursor.execute('UPDATE card SET rtx_5090 = ? WHERE user_id = ?', (income + 78800, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 10000)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1060,7 +1060,7 @@ def rtx_4090(message):
     text=(
         "Вы выбрали карту **RTX 4090**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 483 руб/мес\n"
+        "💰 Доход: 48300 вив/мес\n"
         "💵 Стоимость: 8000 руб\n"
         "⏳ Окупаемость: 15 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1082,7 +1082,7 @@ def buy_4090(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT rtx_4090 FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 8000:
-        cursor.execute('UPDATE card SET rtx_4090 = ? WHERE user_id = ?', (income + 788, user_ids,))
+        cursor.execute('UPDATE card SET rtx_4090 = ? WHERE user_id = ?', (income + 48300, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 8000)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1121,7 +1121,7 @@ def rtx_3090_ti(message):
     text=(
         "Вы выбрали карту **RTX 3090 TI**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 330 руб/мес\n"
+        "💰 Доход: 33000 вив/мес\n"
         "💵 Стоимость: 6000 руб\n"
         "⏳ Окупаемость: 18 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1143,7 +1143,7 @@ def buy_3090_ti(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3090_ti FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 6000:
-        cursor.execute('UPDATE card SET rtx_3090_ti = ? WHERE user_id = ?', (income + 330, user_ids,))
+        cursor.execute('UPDATE card SET rtx_3090_ti = ? WHERE user_id = ?', (income + 33000, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 6000)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1182,7 +1182,7 @@ def rtx_3090(message):
     text=(
         "Вы выбрали карту **RTX 3090**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 300 руб/мес\n"
+        "💰 Доход: 30000 вив/мес\n"
         "💵 Стоимость: 5500 руб\n"
         "⏳ Окупаемость: 15 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1204,7 +1204,7 @@ def buy_3090(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3090 FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 5500:
-        cursor.execute('UPDATE card SET rtx_3090 = ? WHERE user_id = ?', (income + 300, user_ids,))
+        cursor.execute('UPDATE card SET rtx_3090 = ? WHERE user_id = ?', (income + 30000, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 5500)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1243,7 +1243,7 @@ def rtx_3080_ti(message):
     text=(
         "Вы выбрали карту **RTX 3080 TI**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 250 руб/мес\n"
+        "💰 Доход: 25000 вив/мес\n"
         "💵 Стоимость: 3000 руб\n"
         "⏳ Окупаемость: 12 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1265,7 +1265,7 @@ def buy_3080_ti(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3080_ti FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 3000:
-        cursor.execute('UPDATE card SET rtx_3080_ti = ? WHERE user_id = ?', (income + 250, user_ids,))
+        cursor.execute('UPDATE card SET rtx_3080_ti = ? WHERE user_id = ?', (income + 25000, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 3000)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1304,7 +1304,7 @@ def rtx_3080(message):
     text=(
         "Вы выбрали карту **RTX 3080**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 220 руб/мес\n"
+        "💰 Доход: 22000 вив/мес\n"
         "💵 Стоимость: 2500 руб\n"
         "⏳ Окупаемость: 10 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1326,7 +1326,7 @@ def buy_3080(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3080 FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 2500:
-        cursor.execute('UPDATE card SET rtx_3080 = ? WHERE user_id = ?', (income + 220, user_ids,))
+        cursor.execute('UPDATE card SET rtx_3080 = ? WHERE user_id = ?', (income + 22000, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 2500)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1365,7 +1365,7 @@ def iraeo(message):
     text=(
         "Вы выбрали Ice River AEO\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 5000 руб/мес\n"
+        "💰 Доход: 500000 вив/мес\n"
         "💵 Стоимость: 50000 руб\n"
         "⏳ Окупаемость: 10 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1387,7 +1387,7 @@ def buy_iraeo(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT ice_river_aeo FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 50000:
-        cursor.execute('UPDATE card SET ice_river_aeo = ? WHERE user_id = ?', (income + 5000, user_ids,))
+        cursor.execute('UPDATE card SET ice_river_aeo = ? WHERE user_id = ?', (income + 500000, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 50000)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1426,7 +1426,7 @@ def goldshell_ae_box(message):
     text=(
         "Вы выбрали Goldshell AE BOX\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 3000 руб/мес\n"
+        "💰 Доход: 300000 вив/мес\n"
         "💵 Стоимость: 35000 руб\n"
         "⏳ Окупаемость: 11 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1448,7 +1448,7 @@ def buy_goldshell_ae_box(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT goldshell_ae_box FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 35000:
-        cursor.execute('UPDATE card SET goldshell_ae_box = ? WHERE user_id = ?', (income + 3000, user_ids,))
+        cursor.execute('UPDATE card SET goldshell_ae_box = ? WHERE user_id = ?', (income + 300000, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 35000)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1487,7 +1487,7 @@ def goldshell_ae_box_pro(message):
     text=(
         "Вы выбрали Goldshell AE BOX PRO\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 2000 руб/мес\n"
+        "💰 Доход: 200000 вив/мес\n"
         "💵 Стоимость: 15000 руб\n"
         "⏳ Окупаемость: 11 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1509,7 +1509,7 @@ def buy_goldshell_ae_box_pro(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT goldshell_ae_box_pro FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 15000:
-        cursor.execute('UPDATE card SET goldshell_ae_box_pro = ? WHERE user_id = ?', (income + 2000, user_ids,))
+        cursor.execute('UPDATE card SET goldshell_ae_box_pro = ? WHERE user_id = ?', (income + 200000, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 15000)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
