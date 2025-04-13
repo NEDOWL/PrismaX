@@ -31,7 +31,7 @@ cursor.execute('''CREATE TABLE card_common
                (id INTEGER PRIMARY KEY NOT NULL UNIQUE, user_id INTEGER, gtx_1080_ti INTEGER, gtx_1080 INTEGER, gtx_2060 INTEGER, gtx_2070 INTEGER, gtx_2080 INTEGER, gtx_2080_ti INTEGER, rtx_3060 INTEGER, rtx_3060_ti INTEGER, rtx_3070 INTEGER, rtx_3070_ti INTEGER)''')
 print('Table 7 created')
 cursor.execute('''CREATE TABLE user_data
-               (id INTEGER PRIMARY KEY NOT NULL UNIQUE, user_id INTEGER, num_card INTEGER, bank_card INTEGER, sum INTEGER)''')
+               (id INTEGER PRIMARY KEY NOT NULL UNIQUE, num INTEGER, user_id INTEGER, num_card INTEGER, bank_card INTEGER, sum INTEGER)''')
 print('Table 8 created')
 conn.commit()
 conn.close()
