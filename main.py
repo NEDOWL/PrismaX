@@ -2472,7 +2472,7 @@ def roulette_result(message, bet_type, bet_amount, bet_number=None):
     parse_mode="Markdown"
 )
     # Отправляем игроку серверный сид для проверки
-    bot.send_message(message.chat.id, text=f"Серверный сид (для проверки): {server_seed}")
+    #bot.send_message(message.chat.id, text=f"Серверный сид (для проверки): {server_seed}")
 
 
 def generate_server_seed():
@@ -2499,11 +2499,11 @@ def roulette_bet_color(call, color):
 def process_bet_color(message, color):
     try:
         bet_amount = int(message.text)
-        balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+        balanse = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
         if bet_amount > balanse:
             bot.send_message(message.chat.id, text='У вас недостаточно средств для ставки.')
             return
-        cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse - bet_amount, message.from_user.id))
+        cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (balanse - bet_amount, message.from_user.id))
         conn.commit()
         roulette_result(message, 'color', bet_amount, color)
     except ValueError:
@@ -2540,11 +2540,11 @@ def process_bet_number(message):
 def process_bet_number_amount(message, bet_number):
     try:
         bet_amount = int(message.text)
-        balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+        balanse = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
         if bet_amount > balanse:
             bot.send_message(message.chat.id, text='У вас недостаточно средств для ставки.')
             return
-        cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse - bet_amount, message.from_user.id))
+        cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (balanse - bet_amount, message.from_user.id))
         conn.commit()
         roulette_result(message, 'number', bet_amount, bet_number)
     except ValueError:
@@ -2578,7 +2578,7 @@ def start_mines_game(message):
 def process_mines_bet(message):
     try:
         bet_amount = int(message.text)
-        balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+        balanse = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
         if bet_amount > balanse:
             bot.send_message(message.chat.id, text='У вас недостаточно средств для ставки.')
             return
@@ -2586,7 +2586,7 @@ def process_mines_bet(message):
             bot.send_message(message.chat.id, text='Ставка должна быть больше 0.')
             return
 
-        cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse - bet_amount, message.from_user.id))
+        cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (balanse - bet_amount, message.from_user.id))
         conn.commit()
         msg = bot.send_message(message.chat.id, text='Введите количество бомб (1-24):')
         bot.register_next_step_handler(msg, process_bomb_count, bet_amount)
@@ -2634,8 +2634,8 @@ def process_mines_choice(message, bet_amount, bombs, opened_cells, bomb_count):
         if message.text == 'Забрать выигрыш':
             multiplier = 1 + len(opened_cells) * (len(bombs) / 25)  # Реалистичный рост множителя
             winnings = round(bet_amount * multiplier, 2)
-            balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
-            cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse + winnings, message.from_user.id))
+            balanse = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+            cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (balanse + winnings, message.from_user.id))
             conn.commit()
             bot.send_message(message.chat.id, text=f'Вы забрали выигрыш: {winnings} руб.')
             casino_game_menu(message)
@@ -2712,7 +2712,7 @@ def start_slots_game(message):
 def process_slots_bet(message):
     try:
         bet_amount = int(message.text)
-        balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+        balanse = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
         if bet_amount > balanse:
             bot.send_message(message.chat.id, text='У вас недостаточно средств для ставки.')
             return
@@ -2720,7 +2720,7 @@ def process_slots_bet(message):
             bot.send_message(message.chat.id, text='Ставка должна быть больше 0.')
             return
 
-        cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse - bet_amount, message.from_user.id))
+        cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (balanse - bet_amount, message.from_user.id))
         conn.commit()
         play_slots(message, bet_amount)
     except ValueError:
