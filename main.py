@@ -1682,7 +1682,7 @@ def buy(message):
 def buy_btc(call, user_ids):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     back = types.KeyboardButton('Назад')
-    markup.add(buy, back)
+    markup.add(back)
     cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,))
     btc = cursor.fetchone()[0]
     bot.send_message(call.chat.id, text=f'Введите количество BTC для покупки\nВаш баланс: {btc:.8f} ', reply_markup=markup)
