@@ -2660,8 +2660,8 @@ def process_mines_choice(message, bet_amount, bombs, opened_cells, bomb_count):
                 if len(buttons) == 5:  # Добавляем строку из 5 кнопок
                     markup.add(*buttons)
                     buttons = []
-                if buttons:  # Добавляем оставшиеся кнопки, если они есть
-                    markup.add(*buttons)
+            if buttons:  # Добавляем оставшиеся кнопки, если они есть
+                markup.add(*buttons)
             bot.send_message(
     message.chat.id,
     text=(
