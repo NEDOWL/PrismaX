@@ -2674,7 +2674,7 @@ def process_mines_choice(message, bet_amount, bombs, opened_cells, bomb_count):
             casino_game_menu(message)
         else:
             opened_cells.append(choice)
-            multiplier = 1 + len(opened_cells) * (len(bombs) / 25)  # Реалистичный рост множителя
+            multiplier = 1 + len(opened_cells) * (len(bombs) / 25)  ## Реалистичный рост множителя
             potential_winnings = round(bet_amount * multiplier, 2)
             bot.send_message(
                 message.chat.id,
