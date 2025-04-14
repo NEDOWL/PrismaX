@@ -2662,7 +2662,7 @@ def process_mines_choice(message, bet_amount, bombs, opened_cells, bomb_count):
                     buttons = []
                 if buttons:  # Добавляем оставшиеся кнопки, если они есть
                     markup.add(*buttons)
-                bot.send_message(
+            bot.send_message(
     message.chat.id,
     text=(
         f"💣 **Вы попали на мину!**\n\n"
@@ -2671,7 +2671,7 @@ def process_mines_choice(message, bet_amount, bombs, opened_cells, bomb_count):
     ),
     reply_markup=markup
 )            
-                casino_game_menu(message)
+            casino_game_menu(message)
         else:
             opened_cells.append(choice)
             multiplier = 1 + len(opened_cells) * (len(bombs) / 25)  # Реалистичный рост множителя
