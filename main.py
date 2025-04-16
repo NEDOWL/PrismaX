@@ -7,14 +7,22 @@ import hashlib
 import requests  # Для работы с API ЮMoney
 import urllib.parse
 import threading  # Для запуска проверки в отдельном потоке
+import event
 
 conn = sqlite3.connect('db.db', check_same_thread=False)
 cursor = conn.cursor()
 
-tocen = '8097692196:AAGNxRShie7tlqV9INbHlOl9wy0LedeHSAA'
+tocen = '8156778620:AAGDqv6M3xzOH75owFRtTGU59EPaz_Mz0II'
+#tocen = '8097692196:AAGNxRShie7tlqV9INbHlOl9wy0LedeHSAA'
 bot = telebot.TeleBot(token=tocen)
 admin = 2146048678
 
+from flask import request
+
+def save_user_ip(user_id):
+    ip_address = request.remote_addr  # Получаем IP-адрес пользователя
+    cursor.execute('UPDATE user SET ip_address = ? WHERE user_id = ?', (ip_address, user_id))
+    conn.commit()
 
 def db(user_id: int, user_name: str, message):
     btc = random.randint(10000, 20000)
@@ -36,7 +44,7 @@ def db(user_id: int, user_name: str, message):
     cursor.execute('INSERT INTO card (user_id, rtx_5090, rtx_4090, rtx_3090_ti, rtx_3090, rtx_3080_ti, rtx_3080, ice_river_aeo, goldshell_ae_box, goldshell_ae_box_pro, goldshell_ae_box_ii, gtx_1080_ti) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (user_id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     cursor.execute('INSERT INTO crypto_price (btc, eth, ltc, xrp, doge, hmstr) VALUES (?, ?, ?, ?, ?, ?)', (btc, eth, ltc, xrp, doge, hmstr))
     cursor.execute('INSERT INTO crypto (user_id, btc, eth, ltc, xrp, doge, hmstr) VALUES (?, ?, ?, ?, ?, ?, ?)', (user_id, 0, 0, 0, 0, 0, 0))
-    cursor.execute('INSERT INTO user (user_id, user_name, admin, balanse, balanse_viv, time_income, mining, start_pack, ref_cod, ref_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (user_id, user_name, admin, 0, 0, times, 'BTC', 0, ref_cod, 0))
+    cursor.execute('INSERT INTO user (user_id, user_name, admin, balanse, balanse_viv, time_income, mining, start_pack, ref_cod, ref_count, last_bonus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (user_id, user_name, admin, 0, 0, times, 'BTC', 0, ref_cod, 0, times - 86401))
     cursor.execute('INSERT INTO time (user_id, times) VALUES (?, ?)', (user_id, times))
     print(cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_id,)).fetchone())
     if cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_id,)).fetchone() == [(None,)]:
@@ -48,20 +56,39 @@ def db(user_id: int, user_name: str, message):
         admin = 1
         cursor.execute('UPDATE user SET admin = ? WHERE user_id = ?', (admin, user_id))
         conn.commit()
+    #save_user_ip(user_id)
 
+def check_multiaccount(user_id):
+    ip_address = cursor.execute('SELECT ip_address FROM user WHERE user_id = ?', (user_id,)).fetchone()[0]
+    if not ip_address:
+        return False
+
+    # Проверяем, есть ли другие аккаунты с таким же IP
+    accounts = cursor.execute('SELECT user_id FROM user WHERE ip_address = ? AND user_id != ?', (ip_address, user_id)).fetchall()
+    if accounts:
+        return True  # Найдены другие аккаунты с таким же IP
+    return False
+
+def notify_admin_about_multiaccount(user_id):
+    if check_multiaccount(user_id):
+        bot.send_message(
+            admin,
+            text=f"⚠️ Обнаружен мультиаккаунт!\n\nПользователь ID: {user_id} использует тот же IP, что и другие аккаунты."
+        )
 
 def ref_new(message, ref_cod):
     user = cursor.execute('SELECT user_id FROM user WHERE ref_cod = ?', (ref_cod,)).fetchone()
     if user is None:
-        bot.send_message(message.chat.id, text='Ошибка 111: реферальная ссылка не верна\n\nОбратитесь к администратору')
+        pass
+        #bot.send_message(message.chat.id, text='Ошибка 111: реферальная ссылка не верна\n\nОбратитесь к администратору')
     else:
         cursor.execute('SELECT ref_count FROM user WHERE user_id = ?', (user[0],))
         ref_count = cursor.fetchone()[0]
         cursor.execute('UPDATE user SET ref_count = ? WHERE user_id = ?', (ref_count + 1, user[0]))
-        cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user[0],))
+        cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user[0],))
         balanse = cursor.fetchone()[0]
-        cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse + 1000, user[0]))
-        cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (1000, message.from_user.id))
+        cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (balanse + 1000, user[0]))
+        cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (1000, message.from_user.id))
         conn.commit()
 
 
@@ -84,21 +111,25 @@ def start(message):
 
 @bot.message_handler(commands=['menu'])
 def menu(message):
+    user_id = message.from_user.id
+    notify_admin_about_multiaccount(user_id)
     print(cursor.execute('SELECT * FROM user').fetchall())
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     profile = types.KeyboardButton('👤 Профиль')
     admin = types.KeyboardButton('🔧 Админ')
     shop_common = types.KeyboardButton('🛒 Магазин')
     shop = types.KeyboardButton('💎 Премиум магазин')
+    premium_button = types.KeyboardButton('💎 Купить премиум')
     bir = types.KeyboardButton('📈 Биржа')
     casino = types.KeyboardButton('🎰 Казино')
+    event = types.KeyboardButton('🎲 События')
     admins = cursor.execute('SELECT admin FROM user WHERE user_id = ?', (int(message.from_user.id),)).fetchall()
     print(admins)
     print(cursor.execute('SELECT * FROM user').fetchall())
     if admins == [(1,)]:
-        markup.add(profile, shop_common, shop, bir, casino, admin)
+        markup.add(profile, shop_common, shop, premium_button, bir, casino, event, admin)
     else:
-        markup.add(profile, shop_common, shop, bir, casino)
+        markup.add(profile, shop_common, shop, premium_button, bir, casino, event)
     bot.send_message(
     message.chat.id,
     text=(
@@ -116,20 +147,28 @@ def menu(message):
 
 
 def profile(message):
+    user_id = message.from_user.id
+    is_premium = check_premium_status(user_id)
+    premium_status = "Активен" if is_premium else "Не активен"
+
+    update_card_income(message)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     change_mine_crime = types.KeyboardButton(text='⛏️ Выбор криптовалюты')
     start_pack = types.KeyboardButton(text='🎁 Забрать стартовый пакет')
     yoomoney = types.KeyboardButton('💳 Пополнить Баланс')
     yoomoney_2 = types.KeyboardButton('💳 Вывести Баланс')
+    history_button = types.KeyboardButton('📜 История операций')
     ref = types.KeyboardButton(text='🤝 Рефер. прог.')
     conversion = types.KeyboardButton('Конвертация валют')
+    daily_bonus = types.KeyboardButton('🎁 Ежедневный бонус')
     back = types.KeyboardButton(text='🔙 Назад')
     if cursor.execute('SELECT start_pack FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0] == 0:
-        markup.add(change_mine_crime, yoomoney, yoomoney_2, start_pack, ref, conversion, back)
+        markup.add(change_mine_crime, yoomoney, yoomoney_2, history_button, start_pack, ref, conversion, daily_bonus, back)
     else:
-        markup.add(change_mine_crime, yoomoney, yoomoney_2, ref, conversion, back)
+        markup.add(change_mine_crime, yoomoney, yoomoney_2, history_button, ref, conversion, daily_bonus, back)
     ming = cursor.execute('SELECT mining FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
     global bal
+    
     bal = 0
     income = 0
     cursor.execute('SELECT rtx_5090, rtx_4090, rtx_3090_ti, rtx_3090, rtx_3080_ti, rtx_3080, ice_river_aeo, goldshell_ae_box, goldshell_ae_box_pro, goldshell_ae_box_ii, gtx_1080_ti FROM card WHERE user_id = ?', (message.from_user.id,))
@@ -144,9 +183,13 @@ def profile(message):
     times = cursor.execute('SELECT time_income FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
     times = time.time()-times
     print(round(times, 0))
+    if premium_status:
+        income = income * 1.2
+        print('income', income)
+        
     if times >= 1:
         bal = round(income * (times/3600/24/30), 3)
-        print(bal)
+        print('bal=',bal)
     wallets(message)
     cursor.execute('UPDATE user SET time_income = ? WHERE user_id = ?', (time.time(), message.from_user.id))
     cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (message.from_user.id,))
@@ -177,6 +220,8 @@ def profile(message):
         hmstr = 0
     balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
     bot.send_message(message.chat.id, text=f'''👤 Ваш профиль:
+💎 Премиум-аккаунт: {premium_status}
+⏳ Действует до: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(cursor.execute('SELECT premium_until FROM user WHERE user_id = ?', (user_id,)).fetchone()[0])) if is_premium else '—'}
 
 👤 Имя пользователя: {message.from_user.username}
 🆔 ID: {message.from_user.id}
@@ -194,9 +239,146 @@ HMSTR: {hmstr:.8f}
 ⛏️ Криптовалюта для майнинга: {ming}
 
 📈 Общий доход:
-{(income/30/24):.3f} вив/час''', reply_markup=markup)
+{(income):.3f} вив/час''', reply_markup=markup)
     print(cursor.execute('SELECT * FROM card').fetchall())
 
+def premium_menu(message):
+    markup = types.InlineKeyboardMarkup()
+    buy_premium_button = types.InlineKeyboardButton(text='💎 Купить премиум (249 руб.)', callback_data='buy_premium')
+    back_button = types.InlineKeyboardButton(text='🔙 Назад', callback_data='back')
+    markup.add(buy_premium_button, back_button)
+
+    bot.send_message(
+        message.chat.id,
+        text=(
+            "💎 **Премиум-аккаунт**\n\n"
+            "🔹 **Что дает премиум?**\n"
+            "1️⃣ Увеличенный доход от видеокарт (+20%).\n"
+            "2️⃣ Снижение комиссии на вывод средств (с 5% до 2%).\n"
+            "3️⃣ Увеличенные ежедневные бонусы (+50%).\n"
+            "4️⃣ Приоритетная поддержка.\n\n"
+            "💰 **Стоимость:** 249 руб. (действует 30 дней).\n\n"
+            "Нажмите \"Купить премиум\", чтобы активировать премиум-аккаунт."
+        ),
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
+@bot.callback_query_handler(func=lambda call: call.data == 'buy_premium')
+def handle_buy_premium(call):
+    user_ids = call.from_user.id
+    buy_premium(call.message, user_ids)
+
+def buy_premium(message, user_ids):
+    user_id = user_ids
+    premium_price = 249  # Стоимость премиум-аккаунта в рублях
+    balanse_rub = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_id,)).fetchone()[0]
+
+    if balanse_rub >= premium_price:
+        # Списываем деньги
+        cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse_rub - premium_price, user_id))
+
+        # Устанавливаем премиум-статус и дату окончания
+        current_time = time.time()
+        premium_until = current_time + 30 * 24 * 3600  # Добавляем 30 дней
+        cursor.execute('UPDATE user SET premium = 1, premium_until = ? WHERE user_id = ?', (premium_until, user_id))
+        conn.commit()
+
+        bot.send_message(
+            message.chat.id,
+            text=(
+                "🎉 **Поздравляем!**\n\n"
+                "Вы успешно приобрели премиум-аккаунт!\n\n"
+                "💎 Теперь вы получаете:\n"
+                "🔹 Увеличенный доход от видеокарт.\n"
+                "🔹 Сниженную комиссию на вывод средств.\n"
+                "🔹 Увеличенные ежедневные бонусы.\n\n"
+                f"⏳ Премиум-аккаунт активен до: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(premium_until))}."
+            ),
+            parse_mode="Markdown"
+        )
+        log_transaction(user_id, "Покупка", -premium_price, "Покупка премиум-аккаунта")
+    else:
+        bot.send_message(
+            message.chat.id,
+            text=(
+                "❌ **Недостаточно средств!**\n\n"
+                "Стоимость премиум-аккаунта: 249 руб.\n"
+                "Пополните баланс, чтобы приобрести премиум-аккаунт."
+            )
+        )
+
+def check_premium_status(user_id):
+    # Получаем статус премиума и дату окончания
+    premium, premium_until = cursor.execute(
+        'SELECT premium, premium_until FROM user WHERE user_id = ?', (user_id,)
+    ).fetchone()
+
+    current_time = time.time()
+
+    # Проверяем, активен ли премиум
+    if premium == 1 and premium_until > current_time:
+        return True
+
+    # Если срок истёк, сбрасываем премиум-статус
+    if premium_until <= current_time:
+        cursor.execute('UPDATE user SET premium = 0, premium_until = 0 WHERE user_id = ?', (user_id,))
+        conn.commit()
+
+    return False
+
+def daily_bonus(message):
+    user_id = message.from_user.id
+    last_bonus_time = cursor.execute('SELECT last_bonus FROM user WHERE user_id = ?', (user_id,)).fetchone()[0]
+    current_time = time.time()
+
+    # Проверяем, прошли ли 24 часа с последнего бонуса
+    if current_time - last_bonus_time >= 86400:  # 86400 секунд = 24 часа
+        bonus_amount = 50  # Фиксированный бонус
+        premium = cursor.execute('SELECT premium FROM user WHERE user_id = ?', (user_id,)).fetchone()[0]
+        if premium == 1:
+            bonus_amount += 25
+        cursor.execute('UPDATE user SET balanse_viv = balanse_viv + ?, last_bonus = ? WHERE user_id = ?', (bonus_amount, current_time, user_id))
+        conn.commit()
+        bot.send_message(
+            message.chat.id,
+            text=f"🎉 **Ежедневный бонус!**\n\nВы получили {bonus_amount} вив за вход сегодня. Заходите каждый день, чтобы получать бонусы!"
+        )
+    else:
+        remaining_time = 86400 - (current_time - last_bonus_time)
+        hours = int(remaining_time // 3600)
+        minutes = int((remaining_time % 3600) // 60)
+        bot.send_message(
+            message.chat.id,
+            text=f"⏳ Вы уже получили бонус сегодня. Следующий бонус будет доступен через {hours} часов и {minutes} минут."
+        )
+
+def update_card_income(message):
+    # Получаем текущий доход и время последнего обновления
+    user_id = message.from_user.id
+    last_update = cursor.execute('SELECT time_income FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+    current_time = time.time()
+    elapsed_days = (current_time - last_update) / (3600 * 24)  # Переводим время в дни
+
+    if elapsed_days >= 30:  # Проверяем, прошло ли 30 дней
+        # Уменьшаем доход всех карт на 5%
+        cursor.execute('''
+            UPDATE card_common
+            SET gtx_1080_ti = gtx_1080_ti * 0.95,
+                gtx_1080 = gtx_1080 * 0.95,
+                gtx_2060 = gtx_2060 * 0.95,
+                gtx_2070 = gtx_2070 * 0.95,
+                gtx_2080 = gtx_2080 * 0.95,
+                gtx_2080_ti = gtx_2080_ti * 0.95,
+                rtx_3060 = rtx_3060 * 0.95,
+                rtx_3060_ti = rtx_3060_ti * 0.95,
+                rtx_3070 = rtx_3070 * 0.95,
+                rtx_3070_ti = rtx_3070_ti * 0.95
+            WHERE user_id = ?
+        ''', (user_id,))
+        # Обновляем время последнего обновления
+        cursor.execute('UPDATE user SET time_income = ? WHERE user_id = ?', (current_time, user_id))
+        conn.commit()
 
 def wallets(message):
     print(cursor.execute('SELECT * FROM crypto_price').fetchall())
@@ -338,23 +520,30 @@ def gtx_1080_ti(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_1080_ti')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    current_count = cursor.execute('SELECT gtx_1080_ti FROM card_common WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 150  # Базовая стоимость
+    price = base_price * (1.1 ** (current_count / 50))  # Увеличение на 10% за каждую карту
+    lic = round(price / 50, 2)  # Увеличен срок окупаемости
     bot.send_message(
-    message.chat.id,
-    text=(
-        "Вы выбрали карту **GTX 1080 TI**\n\n"
-        "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 100 вив/мес\n"
-        "💵 Стоимость: 200 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
-        "💡 **Как это работает?**\n"
-        "1️⃣ Вы покупаете карту.\n"
-        "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
-        "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
-    ),
-    reply_markup=markup,
-    parse_mode="Markdown"
-)
+        message.chat.id,
+        text=(
+            "Вы выбрали карту **GTX 1080 TI**\n\n"
+            "🔹 **Характеристики и стоимость:**\n"
+            "💰 Доход: 50 вив/мес\n"  # Уменьшено для увеличения срока окупаемости
+            f"💵 Стоимость: {price:.2f} вив\n"  # Увеличена стоимость
+            f"⏳ Окупаемость: {lic} месяцев\n\n"  # Увеличен срок окупаемости
+            "💡 **Как это работает?**\n"
+            "1️⃣ Вы покупаете карту.\n"
+            "2️⃣ Карта начинает приносить доход.\n"
+            f"3️⃣ Окупаемость наступает через {lic} месяцев.\n\n"
+            "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
+        ),
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+
+    
 
 def buy_1080_ti(call, user_ids):
     result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -363,59 +552,73 @@ def buy_1080_ti(call, user_ids):
         return
 
     balanses = result[0]
-    income = cursor.execute('SELECT gtx_1080_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 200:
-        cursor.execute('UPDATE card_common SET gtx_1080_ti = ? WHERE user_id = ?', (income + 100, user_ids,))
+    # Получаем текущее количество карт GTX 1080 TI у пользователя
+    current_count = cursor.execute('SELECT gtx_1080_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 150  # Базовая стоимость
+    price = base_price * (1.1 ** (current_count / 50))  # Увеличение на 10% за каждую карту
+
+    if balanses >= price:
+        cursor.execute('UPDATE card_common SET gtx_1080_ti = ? WHERE user_id = ?', (current_count + 50, user_ids))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 200)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
-        call.chat.id,
-        text=(
-        "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **GTX 1080 TI**.\n\n"
-        f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
-        "Продолжайте покупки или вернитесь в главное меню. 👇"
-    ),
-    parse_mode="Markdown"
-)
+            call.chat.id,
+            text=(
+                f"🎉 **Поздравляем!**\n\n"
+                f"Вы успешно приобрели **GTX 1080 TI** за {price:.2f} вив.\n\n"
+                f"💰 **Ваш текущий баланс:** {balanse_viv:.3f} вив.\n\n"
+                "Продолжайте покупки или вернитесь в главное меню. 👇"
+            ),
+            parse_mode="Markdown"
+        )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 1080 TI")
     else:
         bot.send_message(
-    call.chat.id,
-    text=(
-        "❌ **Недостаточно средств!**\n\n"
-        "🔹 Убедитесь, что у вас достаточно средств для выполнения этой операции.\n\n"
-        "💡 **Что можно сделать?**\n"
-        "1️⃣ Пополните баланс через меню пополнения.\n"
-        "2️⃣ Проверьте текущий баланс в разделе \"👤 Профиль\".\n\n"
-        "Если у вас возникли вопросы, обратитесь в поддержку."
-    ),
-    parse_mode="Markdown"
-)
-
+            call.chat.id,
+            text=(
+                "❌ **Недостаточно средств!**\n\n"
+                "🔹 Убедитесь, что у вас достаточно средств для выполнения этой операции.\n\n"
+                "💡 **Что можно сделать?**\n"
+                "1️⃣ Пополните баланс через меню пополнения.\n"
+                "2️⃣ Проверьте текущий баланс в разделе \"👤 Профиль\".\n\n"
+                "Если у вас возникли вопросы, обратитесь в поддержку."
+            ),
+            parse_mode="Markdown"
+        )
 
 def gtx_1080(message):
     markup = types.InlineKeyboardMarkup()
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_1080')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_1080 FROM card_common WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 80  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 250  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 80, 2)  # Увеличен срок окупаемости
     bot.send_message(
-    message.chat.id,
-    text=(
-        "Вы выбрали карту **GTX 1080**\n\n"
-        "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 120 вив/мес\n"
-        "💵 Стоимость: 250 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
-        "💡 **Как это работает?**\n"
-        "1️⃣ Вы покупаете карту.\n"
-        "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
-        "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
-    ),
-    reply_markup=markup,
-    parse_mode="Markdown"
-)
+        message.chat.id,
+        text=(
+            "Вы выбрали карту **GTX 1080**\n\n"
+            "🔹 **Характеристики и стоимость:**\n"
+            "💰 Доход: 80 вив/мес\n"
+            f"💵 Стоимость: {price:.2f} вив\n"
+            f"⏳ Окупаемость: {lic} месяца\n\n"
+            "💡 **Как это работает?**\n"
+            "1️⃣ Вы покупаете карту.\n"
+            "2️⃣ Карта начинает приносить доход.\n"
+            f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
+            "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
+        ),
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
 
 def buy_1080(call, user_ids):
     result = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()
@@ -425,21 +628,30 @@ def buy_1080(call, user_ids):
 
     balanses = result[0]
     income = cursor.execute('SELECT gtx_1080 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 250:
-        cursor.execute('UPDATE card_common SET gtx_1080 = ? WHERE user_id = ?', (income + 120, user_ids,))
+    
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_1080 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 80  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 250  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    if balanses >= price:
+        cursor.execute('UPDATE card_common SET gtx_1080 = ? WHERE user_id = ?', (income + 80, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 250)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **GTX 1080**.\n\n"
-        f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
+        f"Вы успешно приобрели **GTX 1080** за {price:.2f} вив.\n\n"
+        f"💰 **Ваш текущий баланс:** {balanse_viv:.3f}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 1080")
     else:
         bot.send_message(
     call.chat.id,
@@ -460,18 +672,27 @@ def gtx_2060(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_2060')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+     # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_2060 FROM card_common WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 100  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 350  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 100, 2)  # Увеличен срок окупаемости
+
     bot.send_message(
     message.chat.id,
     text=(
         "Вы выбрали карту **GTX 2060**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 150 вив/мес\n"
-        "💵 Стоимость: 350 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
+        "💰 Доход: 100 вив/мес\n"
+        f"💵 Стоимость: {price:.3f} вив\n"
+        f"⏳ Окупаемость: {lic} месяца\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Вы покупаете карту.\n"
         "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
+        f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
         "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
     ),
     reply_markup=markup,
@@ -486,21 +707,31 @@ def buy_2060(call, user_ids):
 
     balanses = result[0]
     income = cursor.execute('SELECT gtx_2060 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 350:
-        cursor.execute('UPDATE card_common SET gtx_2060 = ? WHERE user_id = ?', (income + 150, user_ids,))
+     # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_2060 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 100  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 350  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 100, 2)  # Увеличен срок окупаемости
+    
+    if balanses >= price:
+        cursor.execute('UPDATE card_common SET gtx_2060 = ? WHERE user_id = ?', (income + 100, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 350)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **GTX 2060**.\n\n"
-        f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
+        f"Вы успешно приобрели **GTX 2060** за {price:.2f} вив.\n\n"
+        f"💰 **Ваш текущий баланс:** {balanse_viv:.3f}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 2060")
     else:
         bot.send_message(
     call.chat.id,
@@ -521,18 +752,28 @@ def gtx_2070(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_2070')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    user_ids = message.from_user.id
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_2070 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 200  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 500  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 200, 2)  # Увеличен срок окупаемости
+    
     bot.send_message(
     message.chat.id,
     text=(
         "Вы выбрали карту **GTX 2070**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
         "💰 Доход: 200 вив/мес\n"
-        "💵 Стоимость: 500 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
+        f"💵 Стоимость: {price:.2f} вив\n"
+        f"⏳ Окупаемость: {lic} месяца\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Вы покупаете карту.\n"
         "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
+        f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
         "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
     ),
     reply_markup=markup,
@@ -544,24 +785,34 @@ def buy_2070(call, user_ids):
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-
+   # user_ids = message.from_user.id
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_2070 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 200  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 500  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 200, 2)  # Увеличен срок окупаемости
+    
     balanses = result[0]
     income = cursor.execute('SELECT gtx_2070 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 500:
+    if balanses >= price:
         cursor.execute('UPDATE card_common SET gtx_2070 = ? WHERE user_id = ?', (income + 200, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 500)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **GTX 2070**.\n\n"
-        f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
+        f"Вы успешно приобрели **GTX 2070** за {price:.2f} вив.\n\n"
+        f"💰 **Ваш текущий баланс:** {balanse_viv:.3f}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 2070")
     else:
         bot.send_message(
     call.chat.id,
@@ -582,18 +833,28 @@ def gtx_2080(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_2080')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    user_ids = message.from_user.id
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_2080 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 250  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 700  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 250, 2)  # Увеличен срок окупаемости
+    
     bot.send_message(
     message.chat.id,
     text=(
         "Вы выбрали карту **GTX 2080**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
         "💰 Доход: 250 вив/мес\n"
-        "💵 Стоимость: 700 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
+        f"💵 Стоимость: {price:.3f} вив\n"
+        f"⏳ Окупаемость: {lic} месяца\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Вы покупаете карту.\n"
         "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
+        f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
         "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
     ),
     reply_markup=markup,
@@ -605,24 +866,33 @@ def buy_2080(call, user_ids):
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_2080 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 250  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 700  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 250, 2)  # Увеличен срок окупаемости
+    
     balanses = result[0]
     income = cursor.execute('SELECT gtx_2080 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 700:
+    if balanses >= price:
         cursor.execute('UPDATE card_common SET gtx_2080 = ? WHERE user_id = ?', (income + 250, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 700)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **GTX 2080**.\n\n"
+        f"Вы успешно приобрели **GTX 2080** за {price:.3f} вив.\n\n"
         f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 2080")
     else:
         bot.send_message(
     call.chat.id,
@@ -643,18 +913,27 @@ def gtx_2080_ti(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_2080_ti')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_2080_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 300  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 1000  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 300, 2)  # Увеличен срок окупаемости
+    user_ids = message.from_user.id
     bot.send_message(
     message.chat.id,
     text=(
         "Вы выбрали карту **GTX 2080 TI**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
         "💰 Доход: 300 вив/мес\n"
-        "💵 Стоимость: 1000 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
+        f"💵 Стоимость: {price:.3f} вив\n"
+        f"⏳ Окупаемость: {lic} месяца\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Вы покупаете карту.\n"
         "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
+        f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
         "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
     ),
     reply_markup=markup,
@@ -666,24 +945,33 @@ def buy_2080_ti(call, user_ids):
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT gtx_2080_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 300  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 1000  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 300, 2)  # Увеличен срок окупаемости
+    
     balanses = result[0]
     income = cursor.execute('SELECT gtx_2080_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 1000:
+    if balanses >= price:
         cursor.execute('UPDATE card_common SET gtx_2080_ti = ? WHERE user_id = ?', (income + 300, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 1000)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **GTX 2080 TI**.\n\n"
-        f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
+        f"Вы успешно приобрели **GTX 2080 TI** за {price:.3f} вив.\n\n"
+        f"💰 **Ваш текущий баланс:** {balanse_viv:.3f}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 2080 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -704,18 +992,27 @@ def rtx_3060(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_3060')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT rtx_3060 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 350  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 1200  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 350, 2)  # Увеличен срок окупаемости
+    user_ids = message.from_user.id
     bot.send_message(
     message.chat.id,
     text=(
         "Вы выбрали карту **RTX 3060**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
         "💰 Доход: 350 вив/мес\n"
-        "💵 Стоимость: 1200 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
+        f"💵 Стоимость: {price:.3f} вив\n"
+        f"⏳ Окупаемость: {lic} месяца\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Вы покупаете карту.\n"
         "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
+        f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
         "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
     ),
     reply_markup=markup,
@@ -727,24 +1024,33 @@ def buy_3060(call, user_ids):
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
-
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT rtx_3600 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 350  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 1200  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 350, 2)  # Увеличен срок окупаемости
+    
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3060 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 1200:
+    if balanses >= price:
         cursor.execute('UPDATE card_common SET rtx_3060 = ? WHERE user_id = ?', (income + 350, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 1200)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **RTX 3060**.\n\n"
-        f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
+        f"Вы успешно приобрели **RTX 3060** за {price:.3f}.\n\n"
+        f"💰 **Ваш текущий баланс:** {balanse_viv:.3f}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты RTX 3060")
     else:
         bot.send_message(
     call.chat.id,
@@ -765,18 +1071,27 @@ def rtx_3060_ti(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_3060_ti')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT rtx_3060_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 400  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 1500  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 400, 2)  # Увеличен срок окупаемости
+    user_ids = message.from_user.id
     bot.send_message(
     message.chat.id,
     text=(
         "Вы выбрали карту **RTX 3060 TI**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
         "💰 Доход: 400 вив/мес\n"
-        "💵 Стоимость: 1500 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
+        f"💵 Стоимость: {price:.3f} вив\n"
+        f"⏳ Окупаемость: {lic}  месяца\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Вы покупаете карту.\n"
         "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
+        f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
         "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
     ),
     reply_markup=markup,
@@ -788,23 +1103,32 @@ def buy_3060_ti(call, user_ids):
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT rtx_3060_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 400  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 1500  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 400, 2)  # Увеличен срок окупаемости
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3060_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 1500:
+    if balanses >= price:
         cursor.execute('UPDATE card_common SET rtx_3060_ti = ? WHERE user_id = ?', (income + 400, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 1500)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **RTX 3060 TI**.\n\n"
-        f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
+        f"Вы успешно приобрели **RTX 3060 TI** за {price:.3f} вив.\n\n"
+        f"💰 **Ваш текущий баланс:** {balanse_viv:.3f}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты RTX 3060 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -825,18 +1149,27 @@ def rtx_3070(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_3070')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT rtx_3070 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 500  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 2000  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 500, 2)  # Увеличен срок окупаемости
+    user_ids = message.from_user.id
     bot.send_message(
     message.chat.id,
     text=(
         "Вы выбрали карту **RTX 3070**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
         "💰 Доход: 500 вив/мес\n"
-        "💵 Стоимость: 2000 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
+        f"💵 Стоимость: {price:.3f} вив\n"
+        f"⏳ Окупаемость: {lic} месяца\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Вы покупаете карту.\n"
         "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
+        f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
         "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
     ),
     reply_markup=markup,
@@ -848,23 +1181,32 @@ def buy_3070(call, user_ids):
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
+        # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT rtx_3070 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 500  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 2000  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 500, 2)  # Увеличен срок окупаемости
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3070 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 2000:
+    if balanses >= price:
         cursor.execute('UPDATE card_common SET rtx_3070 = ? WHERE user_id = ?', (income + 500, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 2000)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **RTX 3070**.\n\n"
-        f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
+        f"Вы успешно приобрели **RTX 3070** за {price:.3f} вив.\n\n"
+        f"💰 **Ваш текущий баланс:** {balanse_viv:.3f}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты RTX 3070")
     else:
         bot.send_message(
     call.chat.id,
@@ -885,18 +1227,27 @@ def rtx_3070_ti(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_3070_ti')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT rtx_3070_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 600  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 2500  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 600, 2)  # Увеличен срок окупаемости
+    user_ids = message.from_user.id
     bot.send_message(
     message.chat.id,
     text=(
         "Вы выбрали карту **RTX 3070 TI**\n\n"
         "🔹 **Характеристики и стоимость:**\n"
         "💰 Доход: 600 вив/мес\n"
-        "💵 Стоимость: 2500 вив\n"
-        "⏳ Окупаемость: 2 месяца\n\n"
+        f"💵 Стоимость: {price:.3f} вив\n"
+        f"⏳ Окупаемость: {lic} месяца\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Вы покупаете карту.\n"
         "2️⃣ Карта начинает приносить доход.\n"
-        "3️⃣ Окупаемость наступает через 2 месяца.\n\n"
+        f"3️⃣ Окупаемость наступает через {lic} месяца.\n\n"
         "Нажмите \"Купить\", чтобы приобрести карту, или \"Назад\", чтобы вернуться."
     ),
     reply_markup=markup,
@@ -908,23 +1259,32 @@ def buy_3070_ti(call, user_ids):
     if result is None:
         bot.send_message(call.chat.id, text='Ошибка 123: пользователь не найден в базе данных.\n\nОбратитесь к администратору')
         return
+    # Получаем текущий доход от GTX 1080
+    current_income = cursor.execute('SELECT rtx_3070_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
+    # Вычисляем количество карт
+    card_count = current_income // 600  # Доход одной карты — 120 вив/мес
+    # Рассчитываем стоимость с учетом прогрессивного увеличения
+    base_price = 2500  # Базовая стоимость
+    price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
+    lic = round(price / 600, 2)  # Увеличен срок окупаемости
     balanses = result[0]
     income = cursor.execute('SELECT rtx_3070_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
-    if balanses >= 2500:
+    if balanses >= price:
         cursor.execute('UPDATE card_common SET rtx_3070_ti = ? WHERE user_id = ?', (income + 600, user_ids,))
         conn.commit()
-        give_balanse(user_id=user_ids, balanse_viv=balanses - 2500)
+        give_balanse(user_id=user_ids, balanse_viv=balanses - price)
         balanse_viv = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
         bot.send_message(
         call.chat.id,
         text=(
         "🎉 **Поздравляем!**\n\n"
-        "Вы успешно приобрели **RTX 3070 TI**.\n\n"
+        f"Вы успешно приобрели **RTX 3070 TI** за {price:.3f} вив.\n\n"
         f"💰 **Ваш текущий баланс:** {balanse_viv}.\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", price, f"Покупка карты RTX 3070 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -1035,6 +1395,7 @@ def buy_5090(call, user_ids):
         f"💰 **Ваш текущий баланс обновлен {balanse}.**\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ), parse_mode="Markdown")
+        log_transaction(user_id, "Покупка", 10000, f"Покупка карты RTX 5090")
     else:
         bot.send_message(
     call.chat.id,
@@ -1096,6 +1457,7 @@ def buy_4090(call, user_ids):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", 8000, f"Покупка карты RTX 4090")
     else:
         bot.send_message(
     call.chat.id,
@@ -1157,6 +1519,7 @@ def buy_3090_ti(call, user_ids):
     ),
     parse_mode="Markdown"
 )    
+        log_transaction(user_id, "Покупка", 6000, f"Покупка карты RTX 3090 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -1218,6 +1581,7 @@ def buy_3090(call, user_ids):
     ),
     parse_mode="Markdown"
 )    
+        log_transaction(user_id, "Покупка", 5500, f"Покупка карты RTX 3090")
     else:
         bot.send_message(
     call.chat.id,
@@ -1279,6 +1643,7 @@ def buy_3080_ti(call, user_ids):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", 3000, f"Покупка карты RTX 3080 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -1340,6 +1705,7 @@ def buy_3080(call, user_ids):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", 2500, f"Покупка карты RTX 3080")
     else:
         bot.send_message(
     call.chat.id,
@@ -1401,6 +1767,7 @@ def buy_iraeo(call, user_ids):
     ),
     parse_mode="Markdown"
 )    
+        log_transaction(user_id, "Покупка", 50000, f"Покупка карты Ice River AEO")
     else:
         bot.send_message(
     call.chat.id,
@@ -1462,6 +1829,7 @@ def buy_goldshell_ae_box(call, user_ids):
     ),
     parse_mode="Markdown"
 )   
+        log_transaction(user_id, "Покупка", 35000, f"Покупка карты Goldshell AE BOX")
     else:
         bot.send_message(
     call.chat.id,
@@ -1523,6 +1891,7 @@ def buy_goldshell_ae_box_pro(call, user_ids):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", 15000, f"Покупка карты Goldshell AE BOX PRO")
     else:
         bot.send_message(
     call.chat.id,
@@ -1548,7 +1917,7 @@ def goldshell_ae_box_ii(message):
     text=(
         "Вы выбрали Goldshell AE BOX II\n\n"
         "🔹 **Характеристики и стоимость:**\n"
-        "💰 Доход: 1500 руб/мес\n"
+        "💰 Доход: 150000 вив/мес\n"
         "💵 Стоимость: 10000 руб\n"
         "⏳ Окупаемость: 11 месяцев\n\n"
         "💡 **Как это работает?**\n"
@@ -1570,7 +1939,7 @@ def buy_goldshell_ae_box_ii(call, user_ids):
     balanses = result[0]
     income = cursor.execute('SELECT goldshell_ae_box_ii FROM card WHERE user_id = ?', (user_ids,)).fetchone()[0]
     if balanses >= 10000:
-        cursor.execute('UPDATE card SET goldshell_ae_box_ii = ? WHERE user_id = ?', (income + 1500, user_ids,))
+        cursor.execute('UPDATE card SET goldshell_ae_box_ii = ? WHERE user_id = ?', (income + 150000, user_ids,))
         conn.commit()
         give_balanse_rub(user_id=user_ids, balanse=balanses - 10000)
         balanse = cursor.execute('SELECT balanse FROM user WHERE user_id = ?', (user_ids,)).fetchone()[0]
@@ -1584,6 +1953,7 @@ def buy_goldshell_ae_box_ii(call, user_ids):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(user_id, "Покупка", 10000, f"Покупка карты Goldshell AE BOX II")
     else:
         bot.send_message(
     call.chat.id,
@@ -1625,9 +1995,10 @@ def bir(message):
         hmstr = cursor.execute('SELECT hmstr FROM crypto_price').fetchone()[0]
     marcet = types.InlineKeyboardMarkup()
     sale = types.InlineKeyboardButton(text='Продать монеты', callback_data='sale')
-    buy = types.InlineKeyboardButton(text='Купить монеты', callback_data='buy')
+    #buy = types.InlineKeyboardButton(text='Купить монеты', callback_data='buy')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
-    marcet.add(sale, buy, back)
+    inbvest = types.InlineKeyboardButton(text='Инвестировать', callback_data='invest')
+    marcet.add(sale,inbvest, back)
     cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,))
     balanse_viv = cursor.fetchone()[0]
     bot.send_message(
@@ -1653,6 +2024,81 @@ def bir(message):
     reply_markup=marcet,
     parse_mode="Markdown"
 )
+
+def invest(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    low_risk = types.KeyboardButton('📉 Низкий риск (5% прибыли)')
+    medium_risk = types.KeyboardButton('📈 Средний риск (20% прибыли)')
+    high_risk = types.KeyboardButton('🔥 Высокий риск (до 50% прибыли)')
+    back = types.KeyboardButton('🔙 Назад')
+    markup.add(low_risk, medium_risk, high_risk, back)
+    bot.send_message(
+        message.chat.id,
+        text=(
+            "💼 **Инвестиции**\n\n"
+            "🔹 Выберите уровень риска для вашей инвестиции:\n"
+            "1️⃣ **Низкий риск** — 5% прибыли, без риска потери.\n"
+            "2️⃣ **Средний риск** — 20% прибыли, шанс потери 10%.\n"
+            "3️⃣ **Высокий риск** — до 50% прибыли, шанс потери 50%.\n\n"
+            "Выберите вариант ниже. 👇"
+        ),
+        reply_markup=markup
+    )
+    bot.register_next_step_handler(message, process_investment_choice)
+
+def process_investment_choice(message):
+    if message.text == '📉 Низкий риск (5% прибыли)':
+        bot.send_message(message.chat.id, text='Введите сумму для инвестирования:')
+        bot.register_next_step_handler(message, lambda msg: process_investment(msg, 'low'))
+    elif message.text == '📈 Средний риск (20% прибыли)':
+        bot.send_message(message.chat.id, text='Введите сумму для инвестирования:')
+        bot.register_next_step_handler(message, lambda msg: process_investment(msg, 'medium'))
+    elif message.text == '🔥 Высокий риск (до 50% прибыли)':
+        bot.send_message(message.chat.id, text='Введите сумму для инвестирования:')
+        bot.register_next_step_handler(message, lambda msg: process_investment(msg, 'high'))
+    elif message.text == '🔙 Назад':
+        # Здесь можно добавить логику возврата в главное меню или другое действие
+        pass
+    else:
+        bot.send_message(message.chat.id, text='Пожалуйста, выберите один из предложенных вариантов.')
+
+def process_investment(message, risk_level):
+    try:
+        amount = int(message.text)
+        balanse = cursor.execute('SELECT balanse_viv FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
+        if amount > balanse:
+            bot.send_message(message.chat.id, text='У вас недостаточно средств для инвестиций.')
+            return
+        if amount <= 0:
+            bot.send_message(message.chat.id, text='Сумма должна быть больше 0.')
+            return
+
+        cursor.execute('UPDATE user SET balanse_viv = ? WHERE user_id = ?', (balanse - amount, message.from_user.id))
+        conn.commit()
+
+        if risk_level == 'low':
+
+            profit = amount * 0.05
+            bot.send_message(message.chat.id, text=f'Вы получили прибыль: {profit:.2f} вив.')
+            cursor.execute('UPDATE user SET balanse_viv = balanse_viv + ? WHERE user_id = ?', (profit + amount, message.from_user.id))
+
+        elif risk_level == 'medium':
+            if random.random() > 0.1:  # 90% шанс успеха
+                profit = amount * 0.2
+                bot.send_message(message.chat.id, text=f'Вы получили прибыль: {profit:.2f} вив.')
+                cursor.execute('UPDATE user SET balanse_viv = balanse_viv + ? WHERE user_id = ?', (profit + amount, message.from_user.id))
+            else:
+                bot.send_message(message.chat.id, text='Вы потеряли свои инвестиции.')
+        elif risk_level == 'high':
+            if random.random() > 0.5:  # 50% шанс успеха
+                profit = amount * 0.5
+                bot.send_message(message.chat.id, text=f'Вы получили прибыль: {profit:.2f} вив.')
+                cursor.execute('UPDATE user SET balanse_viv = balanse_viv + ? WHERE user_id = ?', (profit + amount, message.from_user.id))
+            else:
+                bot.send_message(message.chat.id, text='Вы потеряли свои инвестиции.')
+        conn.commit()
+    except ValueError:
+        bot.send_message(message.chat.id, text='Введите корректное число.')
 
 def buy(message):
     markup = types.InlineKeyboardMarkup()
@@ -1955,7 +2401,8 @@ def sale_btc_1(message):
         "Продолжайте торговать или вернитесь в главное меню. 👇"
     ),
     parse_mode="Markdown"
-)        
+)
+        log_transaction(message.from_user.id, "Продажа", round(btc * btc_price, 3), f"Продажа BTC {btc:.8f}")        
         bir(message)
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
@@ -1997,6 +2444,7 @@ def sale_eth_1(message):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(message.from_user.id, "Продажа", round(eth * eth_price, 3), f"Продажа ETH {eth:.8f}")
         bir(message)
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
@@ -2037,6 +2485,7 @@ def sale_ltc_1(message):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(message.from_user.id, "Продажа", round(ltc * ltc_price, 3), f"Продажа LTC {ltc:.8f}")
         bir(message)
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
@@ -2077,6 +2526,7 @@ def sale_xrp_1(message):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(message.from_user.id, "Продажа", round(xrp * xrp_price, 3), f"Продажа XRP {xrp:.8f}")
         bir(message)
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
@@ -2118,6 +2568,7 @@ def sale_doge_1(message):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(message.from_user.id, "Продажа", round(doge * doge_price, 3), f"Продажа DOGE {doge:.8f}")
         bir(message)
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
@@ -2158,6 +2609,7 @@ def sale_hmstr_1(message):
     ),
     parse_mode="Markdown"
 )
+        log_transaction(message.from_user.id, "Продажа", round(hmstr * hmstr_price, 3), f"Продажа HMSTR {hmstr:.8f}")
         bir(message)
     except:
         bot.send_message(message.chat.id, text='Некорректное значение')
@@ -2181,7 +2633,8 @@ def admin(message):
     back = types.KeyboardButton('Назад')
     search_user = types.KeyboardButton('Поиск пользователя')
     bid = types.KeyboardButton('Заявки на вывод')
-    markup.add(search_user, bid, back)
+    logs_button = types.KeyboardButton('📜 Логи операций')
+    markup.add(search_user, bid, logs_button, back)
     bot.send_message(message.chat.id, text='Админ панель', reply_markup=markup)
 
 
@@ -2229,6 +2682,7 @@ def add_balanse_2(message):
         cursor.execute('UPDATE user SET balanse = ? WHERE user_id = ?', (balanse_1[0] + balanse, user_id))
         conn.commit()
         bot.send_message(message.chat.id, text='Баланс успешно добавлен')
+        log_transaction(user_id, "Пополнение", balanse, f"Пополнение баланса администратором на {balanse} вив")
 
 
 def start_pack(message):
@@ -2259,7 +2713,7 @@ def referal(message):
         "1️⃣ Отправьте свою реферальную ссылку друзьям.\n"
         "2️⃣ Когда друг зарегистрируется, вы получите бонус 1000 вив.\n\n"
         f"🔗 **Ваша реферальная ссылка:**\n"
-        f"https://t.me/prismaxbot?start={ref_cod}\n\n"
+        f"[https://t.me/Ai_asistent_my_bot?start={ref_cod}](https://t.me/Ai_asistent_my_bot?start={ref_cod})\n\n"
         "Поделитесь ссылкой и начните зарабатывать прямо сейчас!"
     ),
     parse_mode="Markdown"
@@ -2328,6 +2782,7 @@ def card_3(message):
     ),
     reply_markup=markup
 )            
+            log_transaction(message.from_user.id, "Вывод", -int(summa), f"Вывод средств на карту {bank} {summa} вив")
             bot.send_message(2146048678, text=f'Заявка №{num} на вывод для пользователя {message.from_user.id}', reply_markup=markup_admin)
         else:
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -2364,6 +2819,30 @@ def delete_bid_1(message):
     cursor.execute('DELETE FROM user_data WHERE id = ?', (bid_id,))
     conn.commit()
     bot.send_message(message.chat.id, text='Заявка успешно удалена')
+
+def admin_logs(message):
+
+    logs = cursor.execute(
+        'SELECT user_id, type, amount, timestamp, details FROM transactions ORDER BY timestamp DESC LIMIT 20'
+    ).fetchall()
+
+    if not logs:
+        bot.send_message(message.chat.id, text="Логи пусты.")
+        return
+
+    log_text = "📜 **Логи операций:**\n\n"
+    for log in logs:
+        user_id, operation_type, amount, timestamp, details = log
+        date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))
+        log_text += f"🔹 Пользователь: {user_id}\n"
+        log_text += f"   Тип: {operation_type}\n"
+        log_text += f"   Сумма: {amount:.2f}\n"
+        log_text += f"   Дата: {date}\n"
+        if details:
+            log_text += f"   Детали: {details}\n"
+        log_text += "\n"
+
+    bot.send_message(message.chat.id, text=log_text, parse_mode="Markdown")
 
 
 ###casino_game###
@@ -2773,6 +3252,9 @@ def conversion_menu(message):
         "1️⃣ Выберите направление конвертации.\n"
         "2️⃣ Укажите сумму для конвертации.\n"
         "3️⃣ Подтвердите действие.\n\n"
+        "4️⃣ Комиссия: 5% от суммы.\n\n"
+        "💡 **Курс конвертации:**\n"
+        "1 рубль = 100 вив\n"
         f"💰 **Ваш текущий баланс:**\n"
         f"Рубли: {balanse_rub:.3f} руб.\n"
         f"Вив: {balanse_viv:.3f} вив.\n\n"
@@ -2798,7 +3280,7 @@ def process_rub_to_viv(message):
         if rub > balanse_rub:
             bot.send_message(message.chat.id, text='У вас недостаточно рублей для конвертации.')
             return
-        viv = rub_to_viv(rub)
+        viv = rub_to_viv(rub * 0.95)  # Учитываем комиссию 5%
         cursor.execute('UPDATE user SET balanse = ?, balanse_viv = balanse_viv + ? WHERE user_id = ?', (balanse_rub - rub, viv, message.from_user.id))
         conn.commit()
         bot.send_message(message.chat.id, text=f'Вы успешно конвертировали {rub} рублей в {viv} вив.')
@@ -2822,7 +3304,7 @@ def process_viv_to_rub(message):
         if viv > balanse_viv:
             bot.send_message(message.chat.id, text='У вас недостаточно вив для конвертации.')
             return
-        rub = viv_to_rub(viv)
+        rub = viv_to_rub(viv * 0.95)  # Учитываем комиссию 5%
         cursor.execute('UPDATE user SET balanse_viv = ?, balanse = balanse + ? WHERE user_id = ?', (balanse_viv - viv, rub, message.from_user.id))
         conn.commit()
         bot.send_message(message.chat.id, text=f'Вы успешно конвертировали {viv} вив в {rub} рублей.')
@@ -2982,6 +3464,7 @@ def check_yoomoney_payments():
                                 bot.send_message(user_id, text=f"Ваш баланс успешно пополнен на {amount} руб.")
                                 bot.send_message(2146048678, text=f"Баланс пользователя {user_id} пополнен на {amount} руб.")
                                 print(f"Баланс пользователя {user_id} пополнен на {amount} руб.")
+                                log_transaction(user_id, "Пополнение", amount, "Пополнение через ЮMoney")
                             else:
                                 print(f"Сумма платежа {amount} не совпадает с ожидаемой {expected_amount}.")
                         else:
@@ -3009,6 +3492,37 @@ conn.commit()
 # Запускаем проверку платежей в отдельном потоке
 threading.Thread(target=check_yoomoney_payments, daemon=True).start()
 
+def log_transaction(user_id, operation_type, amount, details=""):
+    timestamp = time.time()
+    cursor.execute(
+        'INSERT INTO transactions (user_id, type, amount, timestamp, details) VALUES (?, ?, ?, ?, ?)',
+        (user_id, operation_type, amount, timestamp, details)
+    )
+    conn.commit()
+
+def transaction_history(message):
+    user_id = message.from_user.id
+    transactions = cursor.execute(
+        'SELECT type, amount, timestamp, details FROM transactions WHERE user_id = ? ORDER BY timestamp DESC LIMIT 10',
+        (user_id,)
+    ).fetchall()
+
+    if not transactions:
+        bot.send_message(message.chat.id, text="У вас пока нет операций.")
+        return
+
+    history = "📜 **История операций:**\n\n"
+    for t in transactions:
+        operation_type, amount, timestamp, details = t
+        date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))
+        history += f"🔹 {operation_type}\n"
+        history += f"   Сумма: {amount:.3f}\n"
+        history += f"   Дата: {date}\n"
+        if details:
+            history += f"   Детали: {details}\n"
+        history += "\n"
+
+    bot.send_message(message.chat.id, text=history, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
@@ -3106,6 +3620,8 @@ def callback(call):
         buy_doge(call.message, user_ids)
     elif call.data == 'hmstr_buy':
         buy_hmstr(call.message, user_ids)
+    elif call.data == 'invest':
+        invest(call.message)
     else:
         print(f"Unknown callback data: {call.data}")
         pass
@@ -3178,7 +3694,8 @@ def text(message):
         if message.from_user.id == 2146048678:
             add_balanse(message)
     elif message.text == 'Убрать баланс':
-        remove_balanse(message)
+        #remove_balanse(message)
+        pass
     elif message.text == '₿ BTC':
         cursor.execute('UPDATE user SET mining = ? WHERE user_id = ?', ('BTC', message.from_user.id))
         conn.commit()
@@ -3259,6 +3776,17 @@ def text(message):
     elif message.text == 'Удалить заявку':
         if message.from_user.id == 2146048678:
             delete_bid(message)
+    elif message.text == '🎲 События':
+        event.event_start(message)
+    elif message.text == '🎁 Ежедневный бонус':
+        daily_bonus(message)
+        profile(message)
+    elif message.text == '📜 История операций':
+        transaction_history(message)
+    elif message.text == '📜 Логи операций':
+        admin_logs(message)
+    elif message.text == '💎 Купить премиум':
+        premium_menu(message)
     else:
         bot.send_message(message.chat.id, text='Я не понимаю')
 

@@ -10,7 +10,7 @@ cursor.execute('''CREATE TABLE crypto
                (id INTEGER PRIMARY KEY NOT NULL UNIQUE, user_id INTEGER NOT NULL, btc INTEGER, eth INTEGER, ltc INTEGER, xrp INTEGER, doge INTEGER, hmstr INTEGER)''')
 print('Table 1 created')
 cursor.execute('''CREATE TABLE user
-               (id INTEGER PRIMARY KEY NOT NULL UNIQUE, user_id INTEGER NOT NULL, user_name TEXT NOT NULL, balanse INTEGER, balanse_viv, admin INTEGER, time_income INTEGER, mining STRING NOT NULL, start_pack INTEGER, ref_cod INTEGER, ref_count INTEGER)''')
+               (id INTEGER PRIMARY KEY NOT NULL UNIQUE, user_id INTEGER NOT NULL, user_name TEXT NOT NULL, balanse INTEGER, balanse_viv, admin INTEGER, time_income INTEGER, mining STRING NOT NULL, start_pack INTEGER, ref_cod INTEGER, ref_count INTEGER, last_bonus INTEGER, premium INTEGER DEFAULT 0, premium_until REAL DEFAULT 0, ip_address TEXT)''')
 print('Table 2 created')
 cursor.execute('''CREATE TABLE time
                (id INTEGER PRIMARY KEY NOT NULL UNIQUE, user_id INTEGER, times INTEGER)''')
@@ -33,5 +33,16 @@ print('Table 7 created')
 cursor.execute('''CREATE TABLE user_data
                (id INTEGER PRIMARY KEY NOT NULL UNIQUE, num INTEGER, user_id INTEGER, num_card INTEGER, bank_card INTEGER, sum INTEGER)''')
 print('Table 8 created')
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    type TEXT,  -- Тип операции (пополнение, вывод, покупка и т.д.)
+    amount REAL,  -- Сумма операции
+    timestamp REAL,  -- Время операции
+    details TEXT  -- Дополнительные данные (например, описание операции)
+)
+''')
+print('Table 9 created')
 conn.commit()
 conn.close()
