@@ -44,5 +44,12 @@ CREATE TABLE IF NOT EXISTS transactions (
 )
 ''')
 print('Table 9 created')
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS user_agreements (
+    user_id INTEGER PRIMARY KEY,
+    agreed BOOLEAN DEFAULT 0
+)
+''')
+print('Table 10 created')
 conn.commit()
 conn.close()

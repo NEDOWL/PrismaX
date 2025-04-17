@@ -12,12 +12,51 @@ import event
 conn = sqlite3.connect('db.db', check_same_thread=False)
 cursor = conn.cursor()
 
-tocen = '8156778620:AAGDqv6M3xzOH75owFRtTGU59EPaz_Mz0II'
+tocen = '8146355187:AAEmBwpz05l-UNhxwf6CDJsTm0i6p8BxLik'
 #tocen = '8097692196:AAGNxRShie7tlqV9INbHlOl9wy0LedeHSAA'
 bot = telebot.TeleBot(token=tocen)
 admin = 2146048678
 ###
 from flask import request
+
+@bot.message_handler(commands=['policy'])
+def show_agreements_1(message):
+    bot.send_message(message.chat.id, text=(
+            "📜 **Пользовательское соглашение и Политика конфиденциальности**\n\n"
+            "1️⃣ [Пользовательским соглашением](https://telegra.ph/POLZOVATELSKOE-SOGLASHENIE-04-17-6)\n"
+            "2️⃣ [Политикой конфиденциальности](https://telegra.ph/Politika-konfidencialnosti-04-17-7)\n\n"
+            
+        ),
+        parse_mode="Markdown"
+    )
+
+
+def show_agreements(message):
+    markup = types.InlineKeyboardMarkup()
+    agree_button = types.InlineKeyboardButton(text='✅ Согласен', callback_data='agree')
+    disagree_button = types.InlineKeyboardButton(text='❌ Не согласен', callback_data='disagree')
+    markup.add(agree_button, disagree_button)
+    bot.send_message(
+        message.chat.id,
+        text=(
+            "📜 **Пользовательское соглашение и Политика конфиденциальности**\n\n"
+            "Перед использованием бота, пожалуйста, ознакомьтесь с:\n\n"
+            "1️⃣ [Пользовательским соглашением](https://telegra.ph/POLZOVATELSKOE-SOGLASHENIE-04-17-6)\n"
+            "2️⃣ [Политикой конфиденциальности](https://telegra.ph/Politika-konfidencialnosti-04-17-7)\n\n"
+            "Нажимая \"Согласен\", вы подтверждаете, что ознакомились и принимаете условия."
+        ),
+        reply_markup=markup,
+        parse_mode="Markdown"
+    )
+@bot.callback_query_handler(func=lambda call: call.data in ['agree', 'disagree'])
+def handle_agreement(call):
+    if call.data == 'agree':
+        cursor.execute('INSERT OR REPLACE INTO user_agreements (user_id, agreed) VALUES (?, ?)', (call.from_user.id, 1))
+        conn.commit()
+        bot.send_message(call.message.chat.id, text="🎉 Спасибо за согласие! Добро пожаловать!")
+        menu(call.message)  # Переход в главное меню
+    elif call.data == 'disagree':
+        bot.send_message(call.message.chat.id, text="❌ Вы не можете использовать бота без согласия.")
 
 def save_user_ip(user_id):
     ip_address = request.remote_addr  # Получаем IP-адрес пользователя
@@ -58,23 +97,23 @@ def db(user_id: int, user_name: str, message):
         conn.commit()
     #save_user_ip(user_id)
 
-def check_multiaccount(user_id):
-    ip_address = cursor.execute('SELECT ip_address FROM user WHERE user_id = ?', (user_id,)).fetchone()[0]
-    if not ip_address:
-        return False
+#def check_multiaccount(user_id):
+ #   ip_address = cursor.execute('SELECT ip_address FROM user WHERE user_id = ?', (user_id,)).fetchone()[0]
+ #   if not ip_address:
+ #       return False
 
     # Проверяем, есть ли другие аккаунты с таким же IP
-    accounts = cursor.execute('SELECT user_id FROM user WHERE ip_address = ? AND user_id != ?', (ip_address, user_id)).fetchall()
-    if accounts:
-        return True  # Найдены другие аккаунты с таким же IP
-    return False
+   # accounts = cursor.execute('SELECT user_id FROM user WHERE ip_address = ? AND user_id != ?', (ip_address, user_id)).fetchall()
+   # if accounts:
+   #     return True  # Найдены другие аккаунты с таким же IP
+   # return False
 
-def notify_admin_about_multiaccount(user_id):
-    if check_multiaccount(user_id):
-        bot.send_message(
-            admin,
-            text=f"⚠️ Обнаружен мультиаккаунт!\n\nПользователь ID: {user_id} использует тот же IP, что и другие аккаунты."
-        )
+#def notify_admin_about_multiaccount(user_id):
+ #   if check_multiaccount(user_id):
+  #      bot.send_message(
+   #         admin,
+    #        text=f"⚠️ Обнаружен мультиаккаунт!\n\nПользователь ID: {user_id} использует тот же IP, что и другие аккаунты."
+     #   )
 
 def ref_new(message, ref_cod):
     user = cursor.execute('SELECT user_id FROM user WHERE ref_cod = ?', (ref_cod,)).fetchone()
@@ -94,6 +133,14 @@ def ref_new(message, ref_cod):
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    user_id = message.from_user.id
+    agreement = cursor.execute('SELECT agreed FROM user_agreements WHERE user_id = ?', (user_id,)).fetchone()
+    if agreement is None or agreement[0] == 0:
+        show_agreements(message)
+    else:
+        start_1(message)
+
+def start_1(message):
     id = cursor.execute('SELECT user_id FROM user').fetchall()
     id = [i[0] for i in id]
     print(id)
@@ -112,7 +159,7 @@ def start(message):
 @bot.message_handler(commands=['menu'])
 def menu(message):
     user_id = message.from_user.id
-    notify_admin_about_multiaccount(user_id)
+    #notify_admin_about_multiaccount(user_id)
     print(cursor.execute('SELECT * FROM user').fetchall())
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     profile = types.KeyboardButton('👤 Профиль')
@@ -121,15 +168,15 @@ def menu(message):
     shop = types.KeyboardButton('💎 Премиум магазин')
     premium_button = types.KeyboardButton('💎 Купить премиум')
     bir = types.KeyboardButton('📈 Биржа')
-    casino = types.KeyboardButton('🎰 Казино')
+    '''casino = types.KeyboardButton('🎰 Казино')'''
     event = types.KeyboardButton('🎲 События')
     admins = cursor.execute('SELECT admin FROM user WHERE user_id = ?', (int(message.from_user.id),)).fetchall()
     print(admins)
     print(cursor.execute('SELECT * FROM user').fetchall())
     if admins == [(1,)]:
-        markup.add(profile, shop_common, shop, premium_button, bir, casino, event, admin)
+        markup.add(profile, shop_common, shop, premium_button, bir, event, admin)
     else:
-        markup.add(profile, shop_common, shop, premium_button, bir, casino, event)
+        markup.add(profile, shop_common, shop, premium_button, bir, event)
     bot.send_message(
     message.chat.id,
     text=(
@@ -139,7 +186,6 @@ def menu(message):
         "2️⃣ **💎 Премиум магазин** — приобрести эксклюзивные товары.\n"
         "3️⃣ **🛒 Магазин** — купить стандартные товары.\n"
         "4️⃣ **📈 Биржа** — торговать криптовалютой.\n"
-        "5️⃣ **🎰 Казино** — испытать удачу в играх.\n\n"
         "Выберите действие, нажав на соответствующую кнопку ниже. 👇"
     ),
     reply_markup=markup,
@@ -183,9 +229,11 @@ def profile(message):
     times = cursor.execute('SELECT time_income FROM user WHERE user_id = ?', (message.from_user.id,)).fetchone()[0]
     times = time.time()-times
     print(round(times, 0))
-    if premium_status:
+    if premium_status == 'Активен':
         income = income * 1.2
         print('income', income)
+    else:
+        income = income
         
     if times >= 1:
         bal = round(income * (times/3600/24/30), 3)
@@ -2005,11 +2053,10 @@ def bir(message):
     message.chat.id,
     text=(
         "📈 **Добро пожаловать на биржу криптовалют!**\n\n"
-        "🔹 Здесь вы можете покупать и продавать криптовалюту по текущему курсу.\n\n"
+        "🔹 Здесь вы можете покупать криптовалюту по текущему курсу.\n\n"
         "💡 **Как это работает?**\n"
         "1️⃣ Ознакомьтесь с текущими курсами криптовалют.\n"
-        "2️⃣ Выберите действие: купить или продать.\n"
-        "3️⃣ Укажите количество и подтвердите сделку.\n\n"
+        "2️⃣ Укажите количество и подтвердите сделку.\n\n"
         "🔄 **Курс обновляется каждый час.**\n\n"
         f"💰 **Ваш текущий баланс:** {balanse_viv:.3f} вив.\n\n"
         "Текущие курсы:\n"
@@ -2713,7 +2760,7 @@ def referal(message):
         "1️⃣ Отправьте свою реферальную ссылку друзьям.\n"
         "2️⃣ Когда друг зарегистрируется, вы получите бонус 1000 вив.\n\n"
         f"🔗 **Ваша реферальная ссылка:**\n"
-        f"[https://t.me/Ai_asistent_my_bot?start={ref_cod}](https://t.me/Ai_asistent_my_bot?start={ref_cod})\n\n"
+        f"[https://t.me/PrismaX_official_bot?start={ref_cod}](https://t.me/PrismaX_official_bot?start={ref_cod})\n\n"
         "Поделитесь ссылкой и начните зарабатывать прямо сейчас!"
     ),
     parse_mode="Markdown"
@@ -2847,7 +2894,7 @@ def admin_logs(message):
 
 ###casino_game###
 
-
+'''
 def casino_game_menu(message):
     markup = types.InlineKeyboardMarkup()
     roulette = types.InlineKeyboardButton(text='🎡 Рулетка', callback_data='roulette')
@@ -3233,7 +3280,7 @@ def play_slots(message, bet_amount):
         conn.commit()
 
     slots_game_menu(message)
-
+'''
 
 def conversion_menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)

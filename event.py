@@ -9,7 +9,7 @@ con = sqlite3.connect('db.db', check_same_thread=False)
 cur = con.cursor()
 
 def event_start(message):
-    bot.send_message(message.chat.id, "Выберите событие")
+    bot.send_message(message.chat.id, "🛑В разработке🛑")
 
 def event(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
