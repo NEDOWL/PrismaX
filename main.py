@@ -3634,27 +3634,6 @@ def callback(call):
         buy_3070(call.message, user_ids)
     elif call.data == 'buy_3070_ti':
         buy_3070_ti(call.message, user_ids)
-    elif call.data == 'roulette':
-        print(call.data)
-        roulette(call.message)
-    elif call.data == 'red':
-        roulette_bet_color(call, 'red')
-    elif call.data == 'black':
-        roulette_bet_color(call, 'black')
-    elif call.data == 'green':
-        roulette_bet_color(call, 'green')
-    elif call.data == 'number':
-        roulette_bet_number(call)
-    elif call.data == 'casino_game_menu':
-        casino_game_menu(call.message)
-    elif call.data == 'start_mines_game':
-        start_mines_game(call.message)
-    elif call.data == 'mines':
-        mines_game_menu(call.message)
-    elif call.data == 'start_slots_game':
-        start_slots_game(call.message)
-    elif call.data == 'slots':
-        slots_game_menu(call.message)
     elif call.data == 'btc_buy':
         buy_btc(call.message, user_ids)
     elif call.data == 'eth_buy':
@@ -3803,10 +3782,6 @@ def text(message):
         rtx_3070(message)
     elif message.text == '🖥️ RTX 3070 TI':
         rtx_3070_ti(message)
-    elif message.text == '🎰 Казино':
-        casino_game_menu(message)
-    elif message.text == '🎰 Слоты':
-        slots_game_menu(message)
     elif message.text == 'рубли в вив':
         convert_rub_to_viv(message)
     elif message.text == 'вив в рубли':
