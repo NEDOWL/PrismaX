@@ -621,7 +621,7 @@ def buy_1080_ti(call, user_ids):
             ),
             parse_mode="Markdown"
         )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 1080 TI")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты GTX 1080 TI")
     else:
         bot.send_message(
             call.chat.id,
@@ -699,7 +699,7 @@ def buy_1080(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 1080")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты GTX 1080")
     else:
         bot.send_message(
     call.chat.id,
@@ -779,7 +779,7 @@ def buy_2060(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 2060")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты GTX 2060")
     else:
         bot.send_message(
     call.chat.id,
@@ -860,7 +860,7 @@ def buy_2070(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 2070")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты GTX 2070")
     else:
         bot.send_message(
     call.chat.id,
@@ -940,7 +940,7 @@ def buy_2080(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 2080")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты GTX 2080")
     else:
         bot.send_message(
     call.chat.id,
@@ -1020,7 +1020,7 @@ def buy_2080_ti(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты GTX 2080 TI")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты GTX 2080 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -1100,7 +1100,7 @@ def buy_3060(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты RTX 3060")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты RTX 3060")
     else:
         bot.send_message(
     call.chat.id,
@@ -1179,7 +1179,7 @@ def buy_3060_ti(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты RTX 3060 TI")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты RTX 3060 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -1258,7 +1258,7 @@ def buy_3070(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты RTX 3070")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты RTX 3070")
     else:
         bot.send_message(
     call.chat.id,
@@ -1337,7 +1337,7 @@ def buy_3070_ti(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", price, f"Покупка карты RTX 3070 TI")
+        log_transaction(user_ids, "Покупка", price, f"Покупка карты RTX 3070 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -1448,7 +1448,7 @@ def buy_5090(call, user_ids):
         f"💰 **Ваш текущий баланс обновлен {balanse}.**\n\n"
         "Продолжайте покупки или вернитесь в главное меню. 👇"
     ), parse_mode="Markdown")
-        log_transaction(user_id, "Покупка", 10000, f"Покупка карты RTX 5090")
+        log_transaction(user_ids, "Покупка", 10000, f"Покупка карты RTX 5090")
     else:
         bot.send_message(
     call.chat.id,
@@ -1510,7 +1510,7 @@ def buy_4090(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", 8000, f"Покупка карты RTX 4090")
+        log_transaction(user_ids, "Покупка", 8000, f"Покупка карты RTX 4090")
     else:
         bot.send_message(
     call.chat.id,
@@ -1572,7 +1572,7 @@ def buy_3090_ti(call, user_ids):
     ),
     parse_mode="Markdown"
 )    
-        log_transaction(user_id, "Покупка", 6000, f"Покупка карты RTX 3090 TI")
+        log_transaction(user_ids, "Покупка", 6000, f"Покупка карты RTX 3090 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -1634,7 +1634,7 @@ def buy_3090(call, user_ids):
     ),
     parse_mode="Markdown"
 )    
-        log_transaction(user_id, "Покупка", 5500, f"Покупка карты RTX 3090")
+        log_transaction(user_ids, "Покупка", 5500, f"Покупка карты RTX 3090")
     else:
         bot.send_message(
     call.chat.id,
@@ -1696,7 +1696,7 @@ def buy_3080_ti(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", 3000, f"Покупка карты RTX 3080 TI")
+        log_transaction(user_ids, "Покупка", 3000, f"Покупка карты RTX 3080 TI")
     else:
         bot.send_message(
     call.chat.id,
@@ -1758,7 +1758,7 @@ def buy_3080(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", 2500, f"Покупка карты RTX 3080")
+        log_transaction(user_ids, "Покупка", 2500, f"Покупка карты RTX 3080")
     else:
         bot.send_message(
     call.chat.id,
@@ -1820,7 +1820,7 @@ def buy_iraeo(call, user_ids):
     ),
     parse_mode="Markdown"
 )    
-        log_transaction(user_id, "Покупка", 50000, f"Покупка карты Ice River AEO")
+        log_transaction(user_ids, "Покупка", 50000, f"Покупка карты Ice River AEO")
     else:
         bot.send_message(
     call.chat.id,
@@ -1882,7 +1882,7 @@ def buy_goldshell_ae_box(call, user_ids):
     ),
     parse_mode="Markdown"
 )   
-        log_transaction(user_id, "Покупка", 35000, f"Покупка карты Goldshell AE BOX")
+        log_transaction(user_ids, "Покупка", 35000, f"Покупка карты Goldshell AE BOX")
     else:
         bot.send_message(
     call.chat.id,
@@ -1944,7 +1944,7 @@ def buy_goldshell_ae_box_pro(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", 15000, f"Покупка карты Goldshell AE BOX PRO")
+        log_transaction(user_ids, "Покупка", 15000, f"Покупка карты Goldshell AE BOX PRO")
     else:
         bot.send_message(
     call.chat.id,
@@ -2006,7 +2006,7 @@ def buy_goldshell_ae_box_ii(call, user_ids):
     ),
     parse_mode="Markdown"
 )
-        log_transaction(user_id, "Покупка", 10000, f"Покупка карты Goldshell AE BOX II")
+        log_transaction(user_ids, "Покупка", 10000, f"Покупка карты Goldshell AE BOX II")
     else:
         bot.send_message(
     call.chat.id,
