@@ -961,6 +961,7 @@ def gtx_2080_ti(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_2080_ti')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    user_ids = message.from_user.id
     # Получаем текущий доход от GTX 1080
     current_income = cursor.execute('SELECT gtx_2080_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     # Вычисляем количество карт
@@ -1040,6 +1041,7 @@ def rtx_3060(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_3060')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    user_ids = message.from_user.id
     # Получаем текущий доход от GTX 1080
     current_income = cursor.execute('SELECT rtx_3060 FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     # Вычисляем количество карт
@@ -1119,6 +1121,7 @@ def rtx_3060_ti(message):
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_3060_ti')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
     markup.add(buy, back)
+    user_ids = message.from_user.id
     # Получаем текущий доход от GTX 1080
     current_income = cursor.execute('SELECT rtx_3060_ti FROM card_common WHERE user_id = ?', (user_ids,)).fetchone()[0]
     # Вычисляем количество карт
@@ -1127,7 +1130,7 @@ def rtx_3060_ti(message):
     base_price = 1500  # Базовая стоимость
     price = base_price * (1.1 ** card_count)  # Увеличение на 10% за каждую карту
     lic = round(price / 400, 2)  # Увеличен срок окупаемости
-    user_ids = message.from_user.id
+    
     bot.send_message(
     message.chat.id,
     text=(
@@ -1193,6 +1196,7 @@ def buy_3060_ti(call, user_ids):
 
 
 def rtx_3070(message):
+    user_ids = message.from_user.id
     markup = types.InlineKeyboardMarkup()
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_3070')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
