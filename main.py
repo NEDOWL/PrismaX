@@ -1271,6 +1271,7 @@ def buy_3070(call, user_ids):
 
 
 def rtx_3070_ti(message):
+    user_ids = message.from_user.id
     markup = types.InlineKeyboardMarkup()
     buy = types.InlineKeyboardButton(text='Купить', callback_data='buy_3070_ti')
     back = types.InlineKeyboardButton(text='Назад', callback_data='back')
