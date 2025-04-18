@@ -287,7 +287,7 @@ HMSTR: {hmstr:.8f}
 ⛏️ Криптовалюта для майнинга: {ming}
 
 📈 Общий доход:
-{(income):.3f} вив/час''', reply_markup=markup)
+{(income/30/24):.3f} вив/час''', reply_markup=markup)
     print(cursor.execute('SELECT * FROM card').fetchall())
 
 def premium_menu(message):
