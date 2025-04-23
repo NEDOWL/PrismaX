@@ -12,7 +12,7 @@ import event
 conn = sqlite3.connect('db.db', check_same_thread=False)
 cursor = conn.cursor()
 
-tocen = '8146355187:AAEmBwpz05l-UNhxwf6CDJsTm0i6p8BxLik'
+tocen = '8156778620:AAGDqv6M3xzOH75owFRtTGU59EPaz_Mz0II'
 #tocen = '8097692196:AAGNxRShie7tlqV9INbHlOl9wy0LedeHSAA'
 bot = telebot.TeleBot(token=tocen)
 admin = 2146048678
@@ -168,15 +168,16 @@ def menu(message):
     shop = types.KeyboardButton('💎 Премиум магазин')
     premium_button = types.KeyboardButton('💎 Купить премиум')
     bir = types.KeyboardButton('📈 Биржа')
+    rating = types.KeyboardButton('Рейтинг')
     '''casino = types.KeyboardButton('🎰 Казино')'''
     event = types.KeyboardButton('🎲 События')
     admins = cursor.execute('SELECT admin FROM user WHERE user_id = ?', (int(message.from_user.id),)).fetchall()
     print(admins)
     print(cursor.execute('SELECT * FROM user').fetchall())
     if admins == [(1,)]:
-        markup.add(profile, shop_common, shop, premium_button, bir, event, admin)
+        markup.add(profile, shop_common, shop, premium_button, bir, rating, event, admin)
     else:
-        markup.add(profile, shop_common, shop, premium_button, bir, event)
+        markup.add(profile, shop_common, shop, premium_button, bir, rating, event)
     bot.send_message(
     message.chat.id,
     text=(
@@ -3576,6 +3577,68 @@ def transaction_history(message):
 
     bot.send_message(message.chat.id, text=history, parse_mode="Markdown")
 
+def rating(message):
+    # Получаем топ-100 пользователей, отсортированных по балансу вив
+    top_users = cursor.execute(
+        'SELECT user_id, user_name, balanse_viv FROM user ORDER BY balanse_viv DESC LIMIT 100'
+    ).fetchall()
+
+    # Формируем текст для отображения рейтинга
+    rating_text = "🏆 **Топ-100 пользователей:**\n\n"
+    for idx, user in enumerate(top_users, start=1):
+        user_id, user_name, balanse_viv = user
+
+        # Суммируем доходы из таблицы card_common (обычные карты)
+        common_income = cursor.execute(
+            'SELECT SUM(gtx_1080_ti + gtx_1080 + gtx_2060 + gtx_2070 + gtx_2080 + gtx_2080_ti + rtx_3060 + rtx_3060_ti + rtx_3070 + rtx_3070_ti) FROM card_common WHERE user_id = ?',
+            (user_id,)
+        ).fetchone()[0] or 0
+
+        # Суммируем доходы из таблицы card (премиум карты)
+        premium_income = cursor.execute(
+            'SELECT SUM(rtx_5090 + rtx_4090 + rtx_3090_ti + rtx_3090 + rtx_3080_ti + rtx_3080 + ice_river_aeo + goldshell_ae_box + goldshell_ae_box_pro + goldshell_ae_box_ii) FROM card WHERE user_id = ?',
+            (user_id,)
+        ).fetchone()[0] or 0
+
+        # Общий доход
+        total_income = common_income + premium_income
+
+        rating_text += f"{idx}. {user_name or 'Без имени'} (ID: {user_id})\n"
+        rating_text += f"   💰 Баланс: {balanse_viv:.3f} вив\n"
+        rating_text += f"   📈 Общий доход: {total_income:.3f} вив/мес\n\n"
+
+    # Определяем место текущего пользователя
+    user_id = message.from_user.id
+    user_rank = cursor.execute(
+        'SELECT COUNT(*) + 1 FROM user WHERE balanse_viv > (SELECT balanse_viv FROM user WHERE user_id = ?)',
+        (user_id,)
+    ).fetchone()[0]
+
+    user_balanse_viv = cursor.execute(
+        'SELECT balanse_viv FROM user WHERE user_id = ?',
+        (user_id,)
+    ).fetchone()[0] or 0
+
+    # Считаем общий доход текущего пользователя
+    user_common_income = cursor.execute(
+        'SELECT SUM(gtx_1080_ti + gtx_1080 + gtx_2060 + gtx_2070 + gtx_2080 + gtx_2080_ti + rtx_3060 + rtx_3060_ti + rtx_3070 + rtx_3070_ti) FROM card_common WHERE user_id = ?',
+        (user_id,)
+    ).fetchone()[0] or 0
+
+    user_premium_income = cursor.execute(
+        'SELECT SUM(rtx_5090 + rtx_4090 + rtx_3090_ti + rtx_3090 + rtx_3080_ti + rtx_3080 + ice_river_aeo + goldshell_ae_box + goldshell_ae_box_pro + goldshell_ae_box_ii) FROM card WHERE user_id = ?',
+        (user_id,)
+    ).fetchone()[0] or 0
+
+    user_total_income = user_common_income + user_premium_income
+
+    rating_text += f"📊 **Ваше место в рейтинге:** {user_rank}\n"
+    rating_text += f"   💰 Ваш баланс: {user_balanse_viv:.3f} вив\n"
+    rating_text += f"   📈 Ваш общий доход: {user_total_income:.3f} вив/мес\n"
+
+    # Отправляем сообщение пользователю
+    bot.send_message(message.chat.id, text=rating_text, parse_mode="Markdown")
+
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
     user_ids = call.from_user.id  # Используем call.from_user.id для получения ID пользователя
@@ -3814,6 +3877,8 @@ def text(message):
         admin_logs(message)
     elif message.text == '💎 Купить премиум':
         premium_menu(message)
+    elif message.text == 'Рейтинг':
+        rating(message)
     else:
         bot.send_message(message.chat.id, text='Я не понимаю')
 
