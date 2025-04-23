@@ -12,10 +12,9 @@ import event
 conn = sqlite3.connect('db.db', check_same_thread=False)
 cursor = conn.cursor()
 
-tocen = '8156778620:AAGDqv6M3xzOH75owFRtTGU59EPaz_Mz0II'
-#tocen = '8097692196:AAGNxRShie7tlqV9INbHlOl9wy0LedeHSAA'
+tocen = ''
 bot = telebot.TeleBot(token=tocen)
-admin = 2146048678
+admin = 
 ###
 from flask import request
 
