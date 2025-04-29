@@ -51,5 +51,30 @@ CREATE TABLE IF NOT EXISTS user_agreements (
 )
 ''')
 print('Table 10 created')
+# Создаем таблицу для хранения данных о пользователях в событии
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS hacker_event (
+    user_id INTEGER PRIMARY KEY,
+    password TEXT,
+    last_generated INTEGER,
+    encryption_level INTEGER DEFAULT 1,
+    laptop_level INTEGER DEFAULT 1,
+    connection_level INTEGER DEFAULT 1,
+    last_hack_attempt INTEGER DEFAULT 0
+)
+''')
+print('Table 11 created')
+# Таблица для отслеживания активных попыток взлома
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS active_hacks (
+    hacker_id INTEGER,
+    target_id INTEGER,
+    progress INTEGER DEFAULT 0,
+    start_time INTEGER,
+    PRIMARY KEY (hacker_id, target_id)
+)
+''')
+print('Table 12 created')
+conn.commit()
 conn.commit()
 conn.close()
